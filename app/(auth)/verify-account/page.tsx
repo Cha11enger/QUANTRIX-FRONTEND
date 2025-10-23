@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Database, Loader2, HelpCircle } from 'lucide-react';
+import { Database, Loader as Loader2, CircleHelp as HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 
 const verifyAccountSchema = z.object({
