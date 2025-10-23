@@ -1,0 +1,43 @@
+{
+  "customRules": {
+    "codeStyle": {
+      "preferArrowFunctions": true,
+      "preferConstOverLet": true,
+      "maxLineLength": 100,
+      "indentation": "spaces",
+      "indentSize": 2
+    },
+    "namingConventions": {
+      "components": "PascalCase",
+      "functions": "camelCase",
+      "variables": "camelCase",
+      "constants": "UPPER_SNAKE_CASE",
+      "files": "kebab-case"
+    },
+    "fileStructure": {
+      "componentFolders": ["components/ui", "components"],
+      "utilityFolders": ["lib", "hooks"],
+      "pageFolders": ["app/(auth)", "app/(dashboard)"]
+    },
+    "importOrder": [
+      "react",
+      "next",
+      "third-party",
+      "@/components",
+      "@/lib",
+      "@/hooks",
+      "relative"
+    ],
+    "customInstructions": [
+      "Always use TypeScript types",
+      "Prefer functional components with hooks",
+      "Use Tailwind CSS for styling",
+      "Follow the existing project structure",
+      "Add JSDoc comments for complex functions",
+      "Use the existing UI components from components/ui when possible",
+      "Follow the established patterns in the codebase",
+      "Always use structured code format and for documents use document folder",
+      "remember to use mcp as it should be used, formulating your request as a proper json"
+    ]
+  }
+}
