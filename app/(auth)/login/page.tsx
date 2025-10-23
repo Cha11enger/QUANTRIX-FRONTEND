@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { Eye, EyeOff, Database, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import Link from 'next/link';
+import { useEffect } from 'react';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -20,6 +21,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [accountIdentifier, setAccountIdentifier] = useState('');
   const router = useRouter();
   const { login } = useAuthStore();
 
@@ -32,6 +34,17 @@ export default function LoginPage() {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema)
   });
+
+  useEffect(() => {
+    // Get account identifier from session storage
+    const storedIdentifier = sessionStorage.getItem('accountIdentifier');
+    if (storedIdentifier) {
+      setAccountIdentifier(storedIdentifier);
+    } else {
+      // If no account identifier, redirect back to verify page
+      router.push('/verify-account');
+    }
+  }, [router]);
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -62,10 +75,22 @@ export default function LoginPage() {
           <div className="mx-auto h-16 w-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-4">
             <Database className="h-8 w-8 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome back</h2>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+            {accountIdentifier ? `Welcome to ${accountIdentifier}` : 'Welcome back'}
+          </h2>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             Sign in to your account to continue
           </p>
+          {accountIdentifier && (
+            <div className="mt-2">
+              <Link
+                href="/verify-account"
+                className="text-sm text-blue-600 hover:text-blue-500"
+              >
+                Not your account? Switch account
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Form */}

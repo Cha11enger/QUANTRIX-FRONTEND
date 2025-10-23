@@ -17,7 +17,7 @@ export default function HomePage() {
       router.replace('/dashboard');
     } else {
       debug.log('Redirecting to login');
-      router.replace('/login');
+      router.replace('/verify-account');
     }
   }, [isAuthenticated, router]);
 

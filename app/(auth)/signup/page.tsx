@@ -10,7 +10,8 @@ import { useAuthStore } from '@/lib/store';
 import Link from 'next/link';
 
 const signupSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+  username: z.string().min(2, 'Username must be at least 2 characters'),
+  companyName: z.string().min(2, 'Company name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
@@ -209,25 +210,47 @@ export default function SignupPage() {
             </div>
 
             {/* Terms */}
-            <div className="flex items-start">
+          {/* Username */}
               <input
-                {...register('terms')}
-                type="checkbox"
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Username
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1"
               />
-              <label htmlFor="terms" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+              {...register('username')}
                 I agree to the{' '}
-                <button type="button" className="text-blue-600 hover:text-blue-500 font-medium">
+              autoComplete="username"
                   Terms of Service
                 </button>{' '}
                 and{' '}
                 <button type="button" className="text-blue-600 hover:text-blue-500 font-medium">
-                  Privacy Policy
+                ${errors.username ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}
                 </button>
-              </label>
+              placeholder="Enter your username"
             </div>
-            {errors.terms && (
-              <p className="text-sm text-red-600 dark:text-red-400">{errors.terms.message}</p>
+            {errors.username && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.username.message}</p>
+            )}
+          </div>
+
+          {/* Company Name */}
+          <div>
+            <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Company Name
+            </label>
+            <input
+              {...register('companyName')}
+              type="text"
+              autoComplete="organization"
+              className={`
+                w-full px-4 py-3 border rounded-lg bg-gray-50 dark:bg-gray-700 
+                text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none 
+                focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200
+                ${errors.companyName ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}
+              `}
+              placeholder="Enter your company name"
+            />
+            {errors.companyName && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.companyName.message}</p>
             )}
 
             <button

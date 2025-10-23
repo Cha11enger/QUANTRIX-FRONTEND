@@ -58,7 +58,7 @@ export const useAuthStore = create<AuthState>()(
         if (email && password) {
           const user = {
             id: '1',
-            name: 'John Doe',
+            name: 'johndoe',
             email: email,
             avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face'
           };
