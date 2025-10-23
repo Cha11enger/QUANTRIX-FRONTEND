@@ -90,23 +90,23 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* Name */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Full Name
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Username
               </label>
               <input
-                {...register('name')}
+                {...register('username')}
                 type="text"
-                autoComplete="name"
+                autoComplete="username"
                 className={`
                   w-full px-4 py-3 border rounded-lg bg-gray-50 dark:bg-gray-700 
                   text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none 
                   focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200
-                  ${errors.name ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}
+                  ${errors.username ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}
                 `}
-                placeholder="Enter your full name"
+                placeholder="Enter your username"
               />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name.message}</p>
+              {errors.username && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.username.message}</p>
               )}
             </div>
 
@@ -206,28 +206,6 @@ export default function SignupPage() {
               </div>
               {errors.confirmPassword && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword.message}</p>
-              )}
-            </div>
-
-            {/* Username */}
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Username
-              </label>
-              <input
-                {...register('username')}
-                type="text"
-                autoComplete="username"
-                className={`
-                  w-full px-4 py-3 border rounded-lg bg-gray-50 dark:bg-gray-700 
-                  text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none 
-                  focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200
-                  ${errors.username ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}
-                `}
-                placeholder="Enter your username"
-              />
-              {errors.username && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.username.message}</p>
               )}
             </div>
 
