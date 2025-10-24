@@ -1,0 +1,27 @@
+meta {
+  name: Endpoint Availability Check
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/api/endpoint/check?version=v1&endpoint=/health&method=GET
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should have availability info", function() {
+    expect(res.getBody().data).to.have.property('available');
+    expect(res.getBody().data).to.have.property('endpoint');
+    expect(res.getBody().data).to.have.property('method');
+  });
+}

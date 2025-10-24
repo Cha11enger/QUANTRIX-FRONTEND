@@ -13,7 +13,7 @@ interface User {
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, userData?: any) => Promise<boolean>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => void;
 }
@@ -50,24 +50,42 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      login: async (email: string, password: string) => {
+      login: async (email: string, password: string, userData?: any) => {
         debug.log('Login attempt', { email });
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        if (email && password) {
-          const user = {
-            id: '1',
-            name: 'johndoe',
-            email: email,
-            avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face'
-          };
-          set({ user, isAuthenticated: true });
-          debug.log('Login successful', { user });
-          return true;
+        try {
+          // If userData is provided (from registration flow), use it directly
+          if (userData) {
+            const user = {
+              id: userData.id || userData.userId || '1',
+              name: userData.username || userData.name || email.split('@')[0],
+              email: userData.email || email,
+              avatar: userData.avatar || 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face'
+            };
+            set({ user, isAuthenticated: true });
+            debug.log('Login successful with provided user data', { user });
+            return true;
+          }
+          
+          // Fallback to simulated login for existing functionality
+          if (email && password) {
+            const user = {
+              id: '1',
+              name: email.split('@')[0],
+              email: email,
+              avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face'
+            };
+            set({ user, isAuthenticated: true });
+            debug.log('Login successful (simulated)', { user });
+            return true;
+          }
+          
+          debug.log('Login failed', { email });
+          return false;
+        } catch (error) {
+          debug.log('Login error', { error });
+          return false;
         }
-        debug.log('Login failed', { email });
-        return false;
       },
       logout: () => {
         debug.log('Logout');

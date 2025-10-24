@@ -1,0 +1,129 @@
+meta {
+  name: Refresh Token
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/refresh
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "refreshToken": "{{refreshToken}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const data = res.getBody();
+    if (data.success && data.data) {
+      bru.setEnvVar("accessToken", data.data.token);
+      console.log("Token refreshed successfully");
+    }
+  }
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should contain success and data", function() {
+    const data = res.getBody();
+    expect(data).to.have.property('success', true);
+    expect(data).to.have.property('data');
+  });
+  
+  test("Data should contain new token", function() {
+    const data = res.getBody();
+    expect(data.data).to.have.property('token');
+    expect(data.data).to.have.property('expiresIn');
+  });
+}
+
+docs {
+  # Refresh Token
+
+  Get a new access token using a valid refresh token.
+
+  ## Request Body
+  ```json
+  {
+    "refreshToken": "string"  // Valid refresh token from login
+  }
+  ```
+
+  ## Success Response (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "expiresIn": 900
+    },
+    "message": "Token refreshed successfully",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ## Error Responses
+
+  ### Invalid Refresh Token (401 Unauthorized)
+  ```json
+  {
+    "success": false,
+    "error": "Invalid or expired refresh token",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Missing Refresh Token (400 Bad Request)
+  ```json
+  {
+    "success": false,
+    "error": "Refresh token is required",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Token Expired (401 Unauthorized)
+  ```json
+  {
+    "success": false,
+    "error": "Refresh token has expired",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### User Not Found (404 Not Found)
+  ```json
+  {
+    "success": false,
+    "error": "User not found",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Internal Server Error (500)
+  ```json
+  {
+    "success": false,
+    "error": "Internal server error during token refresh",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ## Notes
+  - Refresh tokens have a longer lifespan than access tokens
+  - Use this endpoint when the access token expires
+  - The new access token expires in 15 minutes (900 seconds)
+  - Refresh tokens are single-use and become invalid after use
+  - Store the new access token securely for subsequent API calls
+}

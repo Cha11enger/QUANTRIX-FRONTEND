@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore, useAppStore } from '@/lib/store';
 import { mockConnections } from '@/lib/data';
+import { AuthService } from '@/lib/api';
 import { useState, useCallback, useMemo, forwardRef } from 'react';
 import {
   DropdownMenu,
@@ -132,9 +133,18 @@ export function IconSidebar() {
   const activeConn = mockConnections.find(conn => conn.id === activeConnection);
   const availableRoles = activeConn?.snowflakeContext?.roles || ['ACCOUNTADMIN', 'SYSADMIN', 'USERADMIN', 'SECURITYADMIN', 'PUBLIC', 'ORGADMIN', 'SNOWFLAKE_LEARNING_ROLE'];
 
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      // Call API logout and clear all auth data including stored accounts
+      await AuthService.logout();
+      logout();
+      router.push('/login');
+    } catch (error) {
+      // Even if API call fails, still logout locally
+      console.warn('Logout API call failed:', error);
+      logout();
+      router.push('/login');
+    }
   };
 
   const NavContent = () => (

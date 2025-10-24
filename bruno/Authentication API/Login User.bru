@@ -1,0 +1,153 @@
+meta {
+  name: Login User
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "accountIdentifier": "{{accountIdentifier}}",
+    "username": "{{actualUsername}}",
+    "password": "{{actualPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    const data = res.getBody();
+    if (data.success && data.data) {
+      bru.setEnvVar("accessToken", data.data.token);
+      bru.setEnvVar("refreshToken", data.data.refreshToken);
+      bru.setEnvVar("userId", data.data.user.id);
+      console.log("Login successful, tokens saved");
+    }
+  }
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should contain success and data", function() {
+    const data = res.getBody();
+    expect(data).to.have.property('success', true);
+    expect(data).to.have.property('data');
+  });
+  
+  test("Data should contain tokens and user info", function() {
+    const data = res.getBody();
+    expect(data.data).to.have.property('token');
+    expect(data.data).to.have.property('refreshToken');
+    expect(data.data).to.have.property('user');
+    expect(data.data).to.have.property('expiresIn');
+  });
+}
+
+docs {
+  # Login User
+
+  Authenticate a user and receive JWT tokens for API access.
+
+  ## Request Body
+  ```json
+  {
+    "accountIdentifier": "string",  // Account identifier from registration
+    "username": "string",           // Username
+    "password": "string"            // User password
+  }
+  ```
+
+  ## Success Response (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "user": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "testuser",
+        "email": "testuser@example.com",
+        "accountIdentifier": "ACCT-12345678",
+        "organizationName": "Test Organization",
+        "accountName": "Test Account",
+        "companyName": "Test Company"
+      },
+      "expiresIn": 900
+    },
+    "message": "Login successful",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ## Error Responses
+
+  ### Invalid Credentials (401 Unauthorized)
+  ```json
+  {
+    "success": false,
+    "error": "Invalid credentials",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Account Not Found (404 Not Found)
+  ```json
+  {
+    "success": false,
+    "error": "Account not found",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Validation Error (400 Bad Request)
+  ```json
+  {
+    "success": false,
+    "error": "Validation failed",
+    "details": {
+      "validation_errors": [
+        {
+          "field": "accountIdentifier",
+          "message": "Account identifier is required"
+        },
+        {
+          "field": "username",
+          "message": "Username is required"
+        },
+        {
+          "field": "password",
+          "message": "Password is required"
+        }
+      ]
+    },
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Account Inactive (403 Forbidden)
+  ```json
+  {
+    "success": false,
+    "error": "Account is inactive",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ## Notes
+  - The access token expires in 15 minutes (900 seconds)
+  - Use the refresh token to get a new access token
+  - Store tokens securely and include access token in Authorization header for protected endpoints
+  - Account identifier is provided during user registration
+}

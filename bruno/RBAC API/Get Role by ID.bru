@@ -1,0 +1,193 @@
+meta {
+  name: Get Role by ID
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/roles/{{customRoleId}}
+  body: none
+  auth: bearer
+}
+
+params:query {
+  include_permissions: true
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should contain role", function() {
+    const data = res.getBody();
+    expect(data).to.have.property('success', true);
+    expect(data).to.have.property('data');
+    expect(data.data).to.have.property('role');
+    expect(data.data.role).to.have.property('id');
+    expect(data.data.role).to.have.property('name');
+  });
+  
+  test("Role ID should match request", function() {
+    const data = res.getBody();
+    expect(data.data.role.id).to.equal(bru.getVar('roleId'));
+  });
+}
+
+docs {
+  # Get Role by ID
+
+  Retrieve a specific role by its ID, including its permissions if requested.
+
+  ## Headers
+  ```
+  Authorization: Bearer <access_token>
+  ```
+
+  ## Path Parameters
+  - `roleId` (string, required): The UUID of the role to retrieve
+
+  ## Query Parameters
+  - `include_permissions` (boolean): Include role permissions in response (default: false)
+
+  ## Success Response (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "role": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "name": "ACCOUNTADMIN",
+        "description": "Full administrative access to account management, user management, and system configuration",
+        "is_default": true,
+        "is_active": true,
+        "created_at": "2024-01-15T10:30:00.000Z",
+        "updated_at": "2024-01-15T10:30:00.000Z",
+        "created_by": null,
+        "permissions": [
+          {
+            "id": "perm-1",
+            "name": "users.create",
+            "resource": "users",
+            "action": "create",
+            "description": "Create new user accounts"
+          },
+          {
+            "id": "perm-2",
+            "name": "users.read",
+            "resource": "users",
+            "action": "read",
+            "description": "Read user information"
+          },
+          {
+            "id": "perm-3",
+            "name": "users.update",
+            "resource": "users",
+            "action": "update",
+            "description": "Update user information"
+          },
+          {
+            "id": "perm-4",
+            "name": "users.delete",
+            "resource": "users",
+            "action": "delete",
+            "description": "Delete user accounts"
+          },
+          {
+            "id": "perm-5",
+            "name": "system.admin",
+            "resource": "system",
+            "action": "admin",
+            "description": "Full system administration access"
+          }
+        ]
+      }
+    },
+    "message": "Role retrieved successfully",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ## Success Response without Permissions (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "role": {
+        "id": "550e8400-e29b-41d4-a716-446655440001",
+        "name": "DATAENGINEER",
+        "description": "Access to data pipeline management, ETL operations, and data infrastructure",
+        "is_default": true,
+        "is_active": true,
+        "created_at": "2024-01-15T10:30:00.000Z",
+        "updated_at": "2024-01-15T10:30:00.000Z",
+        "created_by": null
+      }
+    },
+    "message": "Role retrieved successfully",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ## Error Responses
+
+  ### Not Found (404)
+  ```json
+  {
+    "success": false,
+    "error": "Role not found",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Bad Request (400)
+  ```json
+  {
+    "success": false,
+    "error": "Invalid role ID format",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Unauthorized (401)
+  ```json
+  {
+    "success": false,
+    "error": "Authentication required",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Forbidden (403)
+  ```json
+  {
+    "success": false,
+    "error": "Insufficient permissions to view this role",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Internal Server Error (500)
+  ```json
+  {
+    "success": false,
+    "error": "Internal server error",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ## Notes
+  - Users can only view roles they have access to (default roles or their own custom roles)
+  - Permissions are only included if `include_permissions=true`
+  - Default roles are accessible to all authenticated users
+  - Custom roles are only accessible to their creators or users with admin permissions
+  - Role ID must be a valid UUID format
+}

@@ -7,11 +7,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, Database, Loader as Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
+import { AuthService, ApiError } from '@/lib/api';
 import Link from 'next/link';
 import { useEffect } from 'react';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  username: z.string().min(1, 'Username is required'),
   password: z.string().min(1, 'Password is required'),
   remember: z.boolean().optional()
 });
@@ -36,8 +37,8 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    // Get account identifier from session storage
-    const storedIdentifier = sessionStorage.getItem('accountIdentifier');
+    // Get account identifier from session storage using AuthService
+    const storedIdentifier = AuthService.getAccountIdentifier();
     if (storedIdentifier) {
       setAccountIdentifier(storedIdentifier);
     } else {
@@ -49,21 +50,66 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      const success = await login(data.email, data.password);
+      if (!accountIdentifier) {
+        setError('username', { message: 'Account identifier not found. Please verify your account first.' });
+        return;
+      }
+
+      // Call the real API with account identifier, username, and password
+      const loginResult = await AuthService.login(accountIdentifier, data.username, data.password);
+      
+      // Update the auth store with the user data
+      const success = await login(loginResult.user.email, data.password, loginResult.user);
+      
       if (success) {
+        // Clear the account identifier from session storage after successful login
+        AuthService.clearAccountIdentifier();
         router.push('/dashboard');
       } else {
-        setError('email', { message: 'Invalid email or password' });
+        setError('username', { message: 'Login failed. Please try again.' });
       }
     } catch (error) {
-      setError('email', { message: 'An error occurred. Please try again.' });
+      if (error instanceof ApiError) {
+        switch (error.status) {
+          case 401:
+            setError('username', { message: 'Invalid credentials' });
+            break;
+          case 404:
+            setError('username', { message: 'Account not found' });
+            break;
+          case 403:
+            setError('username', { message: 'Account is inactive' });
+            break;
+          case 400:
+            if (error.details?.validation_errors) {
+              // Handle validation errors
+              error.details.validation_errors.forEach((validationError: any) => {
+                if (validationError.field === 'username') {
+                  setError('username', { message: validationError.message });
+                } else if (validationError.field === 'password') {
+                  setError('password', { message: validationError.message });
+                }
+              });
+            } else {
+              setError('username', { message: error.message || 'Invalid request' });
+            }
+            break;
+          case 0:
+            setError('username', { message: 'Network error - please check your connection' });
+            break;
+          default:
+            setError('username', { message: error.message || 'Login failed' });
+        }
+      } else {
+        setError('username', { message: 'An error occurred. Please try again.' });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDemoLogin = () => {
-    setValue('email', 'demo@example.com');
+    setValue('username', 'demo');
     setValue('password', 'password123');
   };
 
@@ -97,23 +143,23 @@ export default function LoginPage() {
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email address
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Username
               </label>
               <input
-                {...register('email')}
-                type="email"
-                autoComplete="email"
+                {...register('username')}
+                type="text"
+                autoComplete="username"
                 className={`
                   w-full px-4 py-3 border rounded-lg bg-gray-50 dark:bg-gray-700 
                   text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none 
                   focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200
-                  ${errors.email ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}
+                  ${errors.username ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}
                 `}
-                placeholder="Enter your email"
+                placeholder="Enter your username"
               />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>
+              {errors.username && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.username.message}</p>
               )}
             </div>
 
@@ -199,8 +245,8 @@ export default function LoginPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">Demo credentials:</p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">Email: demo@example.com</p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">Password: any password</p>
+                <p className="text-sm text-blue-700 dark:text-blue-300">Username: demo</p>
+                <p className="text-sm text-blue-700 dark:text-blue-300">Password: password123</p>
               </div>
               <button
                 type="button"

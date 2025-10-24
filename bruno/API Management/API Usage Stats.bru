@@ -1,0 +1,27 @@
+meta {
+  name: API Usage Stats
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/api/stats
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should have usage statistics", function() {
+    expect(res.getBody().data).to.have.property('totalRequests');
+    expect(res.getBody().data).to.have.property('averageResponseTime');
+    expect(res.getBody().data).to.have.property('errorRate');
+  });
+}

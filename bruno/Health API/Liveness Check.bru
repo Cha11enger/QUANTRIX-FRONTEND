@@ -1,0 +1,25 @@
+meta {
+  name: Liveness Check
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/health/liveness
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should indicate ALIVE status", function() {
+    expect(res.getBody().data.status).to.equal('ALIVE');
+  });
+}

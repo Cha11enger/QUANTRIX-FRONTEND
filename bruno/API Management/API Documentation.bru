@@ -1,0 +1,27 @@
+meta {
+  name: API Documentation
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/api/docs
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should have OpenAPI spec", function() {
+    expect(res.getBody().data).to.have.property('openapi');
+    expect(res.getBody().data).to.have.property('info');
+    expect(res.getBody().data).to.have.property('paths');
+  });
+}

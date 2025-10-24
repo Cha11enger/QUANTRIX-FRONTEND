@@ -1,83 +1,48 @@
 'use client';
 
+import { Suspense, lazy } from 'react';
 import { useAuthStore } from '@/lib/store';
-import { mockDashboardStats, mockRecentActivity, mockConnections } from '@/lib/data';
-import {
-  Database,
-  Activity,
-  Clock,
-  TrendingUp,
-  Plus,
-  ArrowRight,
-  CheckCircle,
-  XCircle,
-  AlertCircle
-} from 'lucide-react';
+import { useDashboardData, useDashboardStats } from '@/hooks/useDashboardData';
+import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
+import { Plus } from 'lucide-react';
+
+// Lazy load components for better performance
+const DashboardStats = lazy(() => import('@/components/dashboard/DashboardStats').then(module => ({ default: module.DashboardStats })));
+const RecentActivity = lazy(() => import('@/components/dashboard/RecentActivity').then(module => ({ default: module.RecentActivity })));
+const QuickActions = lazy(() => import('@/components/dashboard/QuickActions').then(module => ({ default: module.QuickActions })));
+const ConnectionStatus = lazy(() => import('@/components/dashboard/ConnectionStatus').then(module => ({ default: module.ConnectionStatus })));
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
+  const { data: dashboardData, isLoading, error } = useDashboardData();
+  const { data: statsData, isLoading: statsLoading } = useDashboardStats();
 
-  const stats = [
-    {
-      name: 'Total Connections',
-      value: mockDashboardStats.totalConnections,
-      change: '+12%',
-      changeType: 'positive' as const,
-      icon: Database
-    },
-    {
-      name: 'Active Connections',
-      value: mockDashboardStats.activeConnections,
-      change: '+8%',
-      changeType: 'positive' as const,
-      icon: CheckCircle
-    },
-    {
-      name: 'Queries Executed',
-      value: mockDashboardStats.totalQueries,
-      change: '+23%',
-      changeType: 'positive' as const,
-      icon: Activity
-    },
-    {
-      name: 'Avg Query Time',
-      value: `${mockDashboardStats.avgQueryTime}s`,
-      change: '-5%',
-      changeType: 'positive' as const,
-      icon: Clock
-    }
-  ];
+  // Show skeleton while loading
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'connection':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'query':
-        return <Activity className="w-4 h-4 text-blue-500" />;
-      case 'error':
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <AlertCircle className="w-4 h-4 text-yellow-500" />;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffHours < 1) {
-      return 'Just now';
-    } else if (diffHours < 24) {
-      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    } else if (diffDays < 7) {
-      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
-  };
+  // Handle error state
+  if (error) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Failed to load dashboard
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            There was an error loading your dashboard data.
+          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-8">
@@ -97,110 +62,98 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
-          <div
-            key={stat.name}
-            className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <stat.icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+      {/* Stats Grid - Load stats first for better perceived performance */}
+      <Suspense fallback={
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 animate-pulse">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                  <div>
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20 mb-2"></div>
+                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{stat.name}</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
-                </div>
-              </div>
-              <div className={`flex items-center gap-1 text-sm font-medium ${
-                stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
-              }`}>
-                <TrendingUp className="w-4 h-4" />
-                {stat.change}
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      }>
+        {(statsData || dashboardData?.stats) && (
+          <DashboardStats stats={statsData || dashboardData!.stats} />
+        )}
+      </Suspense>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Activity */}
         <div className="lg:col-span-2">
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Activity</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Latest operations and connections</p>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                {mockRecentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3">
-                    {getActivityIcon(activity.type)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 dark:text-white font-medium">
-                        {activity.message}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatDate(activity.timestamp)}
-                      </p>
+          <Suspense fallback={
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 animate-pulse">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-2"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-48"></div>
+              </div>
+              <div className="p-6">
+                <div className="space-y-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-1"></div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          }>
+            {dashboardData?.recentActivity && (
+              <RecentActivity activities={dashboardData.recentActivity} />
+            )}
+          </Suspense>
+        </div>
+
+        {/* Sidebar Components */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <Suspense fallback={
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
+              <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-4"></div>
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                ))}
+              </div>
+            </div>
+          }>
+            <QuickActions />
+          </Suspense>
+
+          {/* Connection Status */}
+          <Suspense fallback={
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
+              <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-4"></div>
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                    </div>
+                    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Quick Actions & Connection Status */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
-            <div className="space-y-3">
-              <button className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                <span className="text-sm font-medium text-gray-900 dark:text-white">New SQL Query</span>
-                <ArrowRight className="w-4 h-4 text-gray-400" />
-              </button>
-              <button className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                <span className="text-sm font-medium text-gray-900 dark:text-white">Chat with AI</span>
-                <ArrowRight className="w-4 h-4 text-gray-400" />
-              </button>
-              <button className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                <span className="text-sm font-medium text-gray-900 dark:text-white">View Schema</span>
-                <ArrowRight className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
-          </div>
-
-          {/* Connection Status */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Connection Status</h3>
-            <div className="space-y-3">
-              {mockConnections.slice(0, 3).map((connection) => (
-                <div key={connection.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${
-                      connection.status === 'connected' ? 'bg-green-500' :
-                      connection.status === 'error' ? 'bg-red-500' : 'bg-gray-400'
-                    }`} />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {connection.name}
-                    </span>
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    connection.status === 'connected' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                    connection.status === 'error' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                  }`}>
-                    {connection.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          }>
+            {dashboardData?.connections && (
+              <ConnectionStatus connections={dashboardData.connections} />
+            )}
+          </Suspense>
         </div>
       </div>
     </div>

@@ -1,0 +1,155 @@
+meta {
+  name: Register User
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/register
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "username": "{{username}}",
+    "email": "{{email}}",
+    "password": "{{password}}",
+    "confirmPassword": "{{confirmPassword}}",
+    "companyName": "{{companyName}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    const data = res.getBody();
+    if (data.success && data.data) {
+      bru.setEnvVar("accountIdentifier", data.data.accountIdentifier);
+      bru.setEnvVar("userId", data.data.userId);
+      console.log("Registration successful, account identifier saved:", data.data.accountIdentifier);
+    }
+  }
+}
+
+tests {
+  test("Status should be 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("Response should contain success and data", function() {
+    const data = res.getBody();
+    expect(data).to.have.property('success', true);
+    expect(data).to.have.property('data');
+  });
+  
+  test("Data should contain user information", function() {
+    const data = res.getBody();
+    expect(data.data).to.have.property('userId');
+    expect(data.data).to.have.property('username');
+    expect(data.data).to.have.property('email');
+    expect(data.data).to.have.property('accountIdentifier');
+  });
+}
+
+docs {
+  # Register User
+
+  Create a new user account in the system.
+
+  ## Request Body
+  ```json
+  {
+    "username": "string",           // Unique username (3-50 characters)
+    "email": "string",              // Valid email address
+    "password": "string",           // Password (min 8 characters, must include uppercase, lowercase, number, special char)
+    "confirmPassword": "string",    // Must match password
+    "companyName": "string"         // Company/organization name
+  }
+  ```
+
+  ## Success Response (201 Created)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "userId": "550e8400-e29b-41d4-a716-446655440000",
+      "username": "testuser",
+      "email": "testuser@example.com",
+      "accountIdentifier": "ACCT-12345678",
+      "accountName": "Test Account",
+      "companyName": "Test Company"
+    },
+    "message": "User registered successfully",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ## Error Responses
+
+  ### Validation Error (400 Bad Request)
+  ```json
+  {
+    "success": false,
+    "error": "Validation failed",
+    "details": {
+      "validation_errors": [
+        {
+          "field": "username",
+          "message": "Username must be between 3 and 50 characters"
+        },
+        {
+          "field": "email",
+          "message": "Please provide a valid email address"
+        },
+        {
+          "field": "password",
+          "message": "Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character"
+        },
+        {
+          "field": "confirmPassword",
+          "message": "Passwords do not match"
+        }
+      ]
+    },
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Username Already Exists (409 Conflict)
+  ```json
+  {
+    "success": false,
+    "error": "Username already exists",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Email Already Exists (409 Conflict)
+  ```json
+  {
+    "success": false,
+    "error": "Email already exists",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ### Internal Server Error (500)
+  ```json
+  {
+    "success": false,
+    "error": "Internal server error during registration",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+  ```
+
+  ## Notes
+  - Upon successful registration, the user is automatically assigned all default roles (ACCOUNTADMIN, DATAENGINEER, DATAANALYST, VIEWER)
+  - The account identifier is generated automatically and used for login
+  - Password requirements: minimum 8 characters, must contain uppercase letter, lowercase letter, number, and special character
+  - Username must be unique across the system
+  - Email must be unique and valid format
+}

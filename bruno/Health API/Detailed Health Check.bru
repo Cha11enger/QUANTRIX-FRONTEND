@@ -1,0 +1,31 @@
+meta {
+  name: Detailed Health Check
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/health/detailed
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should have success field", function() {
+    expect(res.getBody()).to.have.property('success');
+    expect(res.getBody().success).to.be.true;
+  });
+  
+  test("Response should have services array", function() {
+    expect(res.getBody().data).to.have.property('services');
+    expect(res.getBody().data.services).to.be.an('array');
+  });
+}

@@ -1,0 +1,223 @@
+meta {
+  name: Update Custom Role
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/v1/roles/{{customRoleId}}
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "name": "UPDATED_ROLE_{{testSuffix}}",
+    "description": "Updated role at {{$timestamp}}",
+    "permissions": [
+      "data.read",
+      "data.write",
+      "reports.create",
+      "reports.update",
+      "dashboards.view"
+    ],
+    "is_active": true
+  }
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should contain updated role", function() {
+    const data = res.getBody();
+    expect(data).to.have.property('success', true);
+    expect(data).to.have.property('data');
+    expect(data.data).to.have.property('role');
+    expect(data.data.role).to.have.property('id');
+    expect(data.data.role).to.have.property('name');
+  });
+  
+  test("Role name should be updated", function() {
+    const data = res.getBody();
+    expect(data.data.role.name).to.equal('UPDATED_ANALYST');
+  });
+}
+
+docs {
+  # Update Custom Role
+
+  Update an existing custom role's name, description, permissions, or active status.
+
+  ## Headers
+  ```
+  Authorization: Bearer <access_token>
+  Content-Type: application/json
+  ```
+
+  ## Path Parameters
+  - `roleId` (string, required): The UUID of the role to update
+
+  ## Request Body
+  ```json
+  {
+    "name": "UPDATED_ANALYST",
+    "description": "Updated custom analyst role with modified permissions",
+    "permissions": [
+      "data.read",
+      "data.write",
+      "reports.create",
+      "reports.update",
+      "dashboards.view"
+    ],
+    "is_active": true
+  }
+  ```
+
+  ### Request Fields
+  - `name` (string, optional): New role name (must be unique if provided)
+  - `description` (string, optional): New role description
+  - `permissions` (array, optional): Array of permission names to assign to the role
+  - `is_active` (boolean, optional): Whether the role should be active
+
+  ## Success Response (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "role": {
+        "id": "550e8400-e29b-41d4-a716-446655440003",
+        "name": "UPDATED_ANALYST",
+        "description": "Updated custom analyst role with modified permissions",
+        "is_default": false,
+        "is_active": true,
+        "created_at": "2024-01-15T10:30:00.000Z",
+        "updated_at": "2024-01-15T11:45:00.000Z",
+        "created_by": "550e8400-e29b-41d4-a716-446655440000",
+        "permissions": [
+          {
+            "id": "perm-4",
+            "name": "data.read",
+            "resource": "data",
+            "action": "read",
+            "description": "Read access to data resources"
+          },
+          {
+            "id": "perm-7",
+            "name": "data.write",
+            "resource": "data",
+            "action": "write",
+            "description": "Write access to data resources"
+          },
+          {
+            "id": "perm-5",
+            "name": "reports.create",
+            "resource": "reports",
+            "action": "create",
+            "description": "Create new reports"
+          },
+          {
+            "id": "perm-8",
+            "name": "reports.update",
+            "resource": "reports",
+            "action": "update",
+            "description": "Update existing reports"
+          },
+          {
+            "id": "perm-6",
+            "name": "dashboards.view",
+            "resource": "dashboards",
+            "action": "view",
+            "description": "View dashboards"
+          }
+        ]
+      }
+    },
+    "message": "Role updated successfully",
+    "timestamp": "2024-01-15T11:45:00.000Z"
+  }
+  ```
+
+  ## Error Responses
+
+  ### Not Found (404)
+  ```json
+  {
+    "success": false,
+    "error": "Role not found",
+    "timestamp": "2024-01-15T11:45:00.000Z"
+  }
+  ```
+
+  ### Bad Request (400)
+  ```json
+  {
+    "success": false,
+    "error": "Invalid role ID format",
+    "timestamp": "2024-01-15T11:45:00.000Z"
+  }
+  ```
+
+  ### Conflict (409)
+  ```json
+  {
+    "success": false,
+    "error": "Role with name 'UPDATED_ANALYST' already exists",
+    "timestamp": "2024-01-15T11:45:00.000Z"
+  }
+  ```
+
+  ### Unauthorized (401)
+  ```json
+  {
+    "success": false,
+    "error": "Authentication required",
+    "timestamp": "2024-01-15T11:45:00.000Z"
+  }
+  ```
+
+  ### Forbidden (403)
+  ```json
+  {
+    "success": false,
+    "error": "Cannot update default role or insufficient permissions",
+    "timestamp": "2024-01-15T11:45:00.000Z"
+  }
+  ```
+
+  ### Unprocessable Entity (422)
+  ```json
+  {
+    "success": false,
+    "error": "Invalid permission: 'invalid.permission'",
+    "timestamp": "2024-01-15T11:45:00.000Z"
+  }
+  ```
+
+  ### Internal Server Error (500)
+  ```json
+  {
+    "success": false,
+    "error": "Internal server error",
+    "timestamp": "2024-01-15T11:45:00.000Z"
+  }
+  ```
+
+  ## Notes
+  - Only custom roles can be updated (default roles are read-only)
+  - Users can only update roles they created or have admin permissions
+  - Role names must be unique if provided in the update
+  - Default roles (ACCOUNTADMIN, DATAENGINEER, DATAANALYST, VIEWER) cannot be modified
+  - Invalid permissions in the request will result in a 422 error
+  - Partial updates are supported - only provided fields will be updated
+  - The `updated_at` timestamp is automatically set when the role is modified
+}

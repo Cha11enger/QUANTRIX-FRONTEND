@@ -1,0 +1,188 @@
+meta {
+  name: Get Current Role of User
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/me/role
+  body: none
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should contain user role", function() {
+    const data = res.getBody();
+    expect(data).to.have.property('success', true);
+    expect(data).to.have.property('data');
+    expect(data.data).to.have.property('role');
+    expect(data.data.role).to.have.property('id');
+    expect(data.data.role).to.have.property('name');
+  });
+  
+  test("Role should have required properties", function() {
+    const data = res.getBody();
+    expect(data.data.role).to.have.property('is_default');
+    expect(data.data.role).to.have.property('assigned_at');
+  });
+}
+
+docs {
+  # Get Current Role of User
+
+  Get the current primary role assigned to the authenticated user.
+
+  ## Headers
+  ```
+  Authorization: Bearer <access_token>
+  ```
+
+  ## Success Response - User with Role (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "role": {
+        "id": "550e8400-e29b-41d4-a716-446655440001",
+        "name": "DATAENGINEER",
+        "description": "Data engineering and processing capabilities",
+        "is_default": true,
+        "assigned_at": "2024-01-15T14:30:00.000Z",
+        "permissions": [
+          {
+            "id": "perm-1",
+            "name": "data.read",
+            "resource": "data",
+            "action": "read",
+            "description": "Read access to data resources"
+          },
+          {
+            "id": "perm-2",
+            "name": "data.write",
+            "resource": "data",
+            "action": "write",
+            "description": "Write access to data resources"
+          },
+          {
+            "id": "perm-3",
+            "name": "data.create",
+            "resource": "data",
+            "action": "create",
+            "description": "Create new data resources"
+          }
+        ]
+      }
+    },
+    "message": "User role retrieved successfully",
+    "timestamp": "2024-01-15T16:00:00.000Z"
+  }
+  ```
+
+  ## Success Response - User without Role (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "role": null
+    },
+    "message": "User has no assigned role",
+    "timestamp": "2024-01-15T16:00:00.000Z"
+  }
+  ```
+
+  ## Success Response - Custom Role (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "role": {
+        "id": "550e8400-e29b-41d4-a716-446655440005",
+        "name": "CUSTOM_ANALYST",
+        "description": "Custom role for data analysis with specific permissions",
+        "is_default": false,
+        "assigned_at": "2024-01-15T15:00:00.000Z",
+        "permissions": [
+          {
+            "id": "perm-1",
+            "name": "data.read",
+            "resource": "data",
+            "action": "read",
+            "description": "Read access to data resources"
+          },
+          {
+            "id": "perm-7",
+            "name": "reports.create",
+            "resource": "reports",
+            "action": "create",
+            "description": "Create new reports"
+          }
+        ]
+      }
+    },
+    "message": "User role retrieved successfully",
+    "timestamp": "2024-01-15T16:00:00.000Z"
+  }
+  ```
+
+  ## Error Responses
+
+  ### Unauthorized (401)
+  ```json
+  {
+    "success": false,
+    "error": "Authentication required",
+    "timestamp": "2024-01-15T16:00:00.000Z"
+  }
+  ```
+
+  ### Invalid Token (401)
+  ```json
+  {
+    "success": false,
+    "error": "Invalid or expired token",
+    "timestamp": "2024-01-15T16:00:00.000Z"
+  }
+  ```
+
+  ### User Not Found (404)
+  ```json
+  {
+    "success": false,
+    "error": "User not found",
+    "timestamp": "2024-01-15T16:00:00.000Z"
+  }
+  ```
+
+  ### Internal Server Error (500)
+  ```json
+  {
+    "success": false,
+    "error": "Internal server error",
+    "timestamp": "2024-01-15T16:00:00.000Z"
+  }
+  ```
+
+  ## Notes
+  - Returns the primary role assigned to the user (users typically have one primary role)
+  - If user has no role assigned, returns `role: null`
+  - Includes all permissions associated with the role
+  - The `is_default` field indicates if this is a system default role or custom role
+  - The `assigned_at` field shows when the role was assigned to the user
+  - Requires valid authentication token
+  - Only returns the user's own role information (cannot access other users' roles through this endpoint)
+}

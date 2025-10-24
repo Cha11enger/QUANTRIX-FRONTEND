@@ -1,0 +1,249 @@
+meta {
+  name: Assign Role Permissions
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/roles/{{customRoleId}}/permissions
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "permissions": [
+      "data.create",
+      "data.update",
+      "reports.delete",
+      "dashboards.create"
+    ]
+  }
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should contain updated role with permissions", function() {
+    const data = res.getBody();
+    expect(data).to.have.property('success', true);
+    expect(data).to.have.property('data');
+    expect(data.data).to.have.property('role');
+    expect(data.data.role).to.have.property('permissions');
+    expect(data.data.role.permissions).to.be.an('array');
+  });
+  
+  test("Should include assigned permissions", function() {
+    const data = res.getBody();
+    const permissionNames = data.data.role.permissions.map(p => p.name);
+    expect(permissionNames).to.include('data.create');
+    expect(permissionNames).to.include('data.update');
+  });
+}
+
+docs {
+  # Assign Role Permissions
+
+  Assign additional permissions to an existing role. This operation adds permissions without removing existing ones.
+
+  ## Headers
+  ```
+  Authorization: Bearer <access_token>
+  Content-Type: application/json
+  ```
+
+  ## Path Parameters
+  - `roleId` (string, required): The UUID of the role to assign permissions to
+
+  ## Request Body
+  ```json
+  {
+    "permissions": [
+      "data.create",
+      "data.update",
+      "reports.delete",
+      "dashboards.create"
+    ]
+  }
+  ```
+
+  ### Request Fields
+  - `permissions` (array, required): Array of permission names to assign to the role
+
+  ## Success Response (200 OK)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "role": {
+        "id": "550e8400-e29b-41d4-a716-446655440003",
+        "name": "CUSTOM_ANALYST",
+        "description": "Custom analyst role with specific permissions",
+        "is_default": false,
+        "is_active": true,
+        "created_at": "2024-01-15T10:30:00.000Z",
+        "updated_at": "2024-01-15T12:15:00.000Z",
+        "created_by": "550e8400-e29b-41d4-a716-446655440000",
+        "permissions": [
+          {
+            "id": "perm-4",
+            "name": "data.read",
+            "resource": "data",
+            "action": "read",
+            "description": "Read access to data resources"
+          },
+          {
+            "id": "perm-9",
+            "name": "data.create",
+            "resource": "data",
+            "action": "create",
+            "description": "Create new data entries"
+          },
+          {
+            "id": "perm-10",
+            "name": "data.update",
+            "resource": "data",
+            "action": "update",
+            "description": "Update existing data entries"
+          },
+          {
+            "id": "perm-5",
+            "name": "reports.create",
+            "resource": "reports",
+            "action": "create",
+            "description": "Create new reports"
+          },
+          {
+            "id": "perm-11",
+            "name": "reports.delete",
+            "resource": "reports",
+            "action": "delete",
+            "description": "Delete existing reports"
+          },
+          {
+            "id": "perm-6",
+            "name": "dashboards.view",
+            "resource": "dashboards",
+            "action": "view",
+            "description": "View dashboards"
+          },
+          {
+            "id": "perm-12",
+            "name": "dashboards.create",
+            "resource": "dashboards",
+            "action": "create",
+            "description": "Create new dashboards"
+          }
+        ]
+      },
+      "assigned_permissions": [
+        {
+          "id": "perm-9",
+          "name": "data.create",
+          "resource": "data",
+          "action": "create",
+          "description": "Create new data entries"
+        },
+        {
+          "id": "perm-10",
+          "name": "data.update",
+          "resource": "data",
+          "action": "update",
+          "description": "Update existing data entries"
+        },
+        {
+          "id": "perm-11",
+          "name": "reports.delete",
+          "resource": "reports",
+          "action": "delete",
+          "description": "Delete existing reports"
+        },
+        {
+          "id": "perm-12",
+          "name": "dashboards.create",
+          "resource": "dashboards",
+          "action": "create",
+          "description": "Create new dashboards"
+        }
+      ]
+    },
+    "message": "Permissions assigned successfully",
+    "timestamp": "2024-01-15T12:15:00.000Z"
+  }
+  ```
+
+  ## Error Responses
+
+  ### Not Found (404)
+  ```json
+  {
+    "success": false,
+    "error": "Role not found",
+    "timestamp": "2024-01-15T12:15:00.000Z"
+  }
+  ```
+
+  ### Bad Request (400)
+  ```json
+  {
+    "success": false,
+    "error": "Permissions array is required",
+    "timestamp": "2024-01-15T12:15:00.000Z"
+  }
+  ```
+
+  ### Unauthorized (401)
+  ```json
+  {
+    "success": false,
+    "error": "Authentication required",
+    "timestamp": "2024-01-15T12:15:00.000Z"
+  }
+  ```
+
+  ### Forbidden (403)
+  ```json
+  {
+    "success": false,
+    "error": "Cannot modify permissions for default role or insufficient permissions",
+    "timestamp": "2024-01-15T12:15:00.000Z"
+  }
+  ```
+
+  ### Unprocessable Entity (422)
+  ```json
+  {
+    "success": false,
+    "error": "Invalid permission: 'invalid.permission'",
+    "timestamp": "2024-01-15T12:15:00.000Z"
+  }
+  ```
+
+  ### Internal Server Error (500)
+  ```json
+  {
+    "success": false,
+    "error": "Internal server error",
+    "timestamp": "2024-01-15T12:15:00.000Z"
+  }
+  ```
+
+  ## Notes
+  - Only custom roles can have permissions modified (default roles are read-only)
+  - Users can only modify roles they created or have admin permissions
+  - This operation adds permissions without removing existing ones
+  - Duplicate permissions are ignored (no error thrown)
+  - Invalid permissions in the request will result in a 422 error
+  - The response includes both the updated role and the newly assigned permissions
+  - The `updated_at` timestamp is automatically updated when permissions are modified
+}

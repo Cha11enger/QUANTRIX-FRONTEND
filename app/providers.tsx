@@ -1,20 +1,34 @@
 'use client';
 
 import { ThemeProvider } from 'next-themes';
-import { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactNode, useState } from 'react';
 import { debug } from '@/lib/debug';
 
 export function Providers({ children }: { children: ReactNode }) {
   debug.log('Providers rendered');
   
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000, // 1 minute
+        gcTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+        refetchOnWindowFocus: false,
+      },
+    },
+  }));
+  
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="light"
-      enableSystem
-      disableTransitionOnChange
-    >
-      {children}
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="light"
+        enableSystem
+        disableTransitionOnChange
+      >
+        {children}
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

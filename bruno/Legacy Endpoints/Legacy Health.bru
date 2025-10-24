@@ -1,0 +1,25 @@
+meta {
+  name: Legacy Health
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/health
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status should be 301 (Redirect)", function() {
+    expect(res.getStatus()).to.equal(301);
+  });
+  
+  test("Should redirect to new endpoint", function() {
+    expect(res.getResponseText()).to.contain('/api/v1/health');
+  });
+}

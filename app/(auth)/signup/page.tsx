@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, Database, Loader as Loader2, Check } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
+import { AuthService, ApiError } from '@/lib/api';
 import Link from 'next/link';
 
 const signupSchema = z.object({
@@ -54,18 +55,63 @@ export default function SignupPage() {
   const onSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Register user with API
+      const registerResponse = await AuthService.register({
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+        companyName: data.companyName
+      });
+
+      console.debug('Registration successful:', registerResponse);
+
+      // Auto login after successful registration
+      const loginResponse = await AuthService.login(
+        registerResponse.accountIdentifier,
+        data.username,
+        data.password
+      );
+
+      console.debug('Auto-login successful:', loginResponse);
+
+      // Update Zustand store with user data from registration response
+      const success = await login(data.email, 'demo', {
+        id: registerResponse.userId,
+        userId: registerResponse.userId,
+        username: registerResponse.username,
+        email: registerResponse.email,
+        accountIdentifier: registerResponse.accountIdentifier,
+        companyName: registerResponse.companyName
+      });
       
-      // Auto login after signup
-      const success = await login(data.email, 'demo');
       if (success) {
         router.push('/dashboard');
       } else {
-        setError('email', { message: 'Registration failed. Please try again.' });
+        setError('email', { message: 'Login after registration failed. Please try logging in manually.' });
       }
     } catch (error) {
-      setError('email', { message: 'An error occurred. Please try again.' });
+      console.error('Registration error:', error);
+      
+      if (error instanceof ApiError) {
+        // Handle specific API errors
+        if (error.status === 400 && error.details?.validation_errors) {
+          // Handle validation errors
+          error.details.validation_errors.forEach((validationError: any) => {
+            const field = validationError.field as keyof SignupFormData;
+            if (field in data) {
+              setError(field, { message: validationError.message });
+            }
+          });
+        } else if (error.status === 409) {
+          // Handle duplicate username/email
+          setError('email', { message: 'Username or email already exists. Please try different credentials.' });
+        } else {
+          setError('email', { message: error.message || 'Registration failed. Please try again.' });
+        }
+      } else {
+        setError('email', { message: 'An unexpected error occurred. Please try again.' });
+      }
     } finally {
       setIsLoading(false);
     }
