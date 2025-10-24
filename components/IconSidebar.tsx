@@ -2,21 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import {
-  Database,
-  Home,
-  Code,
-  MessageSquare,
-  Settings,
-  Sun,
-  Moon,
-  LogOut,
-  Menu,
-  X,
-  ChevronDown,
-  Check,
-  User
-} from 'lucide-react';
+import { Database, Chrome as Home, Code, MessageSquare, Settings, Sun, Moon, LogOut, Menu, X, ChevronDown, Check, User } from 'lucide-react';
 import { useAuthStore, useAppStore } from '@/lib/store';
 import { mockConnections } from '@/lib/data';
 import { useState, useCallback, useMemo, forwardRef } from 'react';
