@@ -1213,6 +1213,9 @@ export default function SettingsPage() {
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter email address"
                   />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Status
@@ -1227,46 +1230,87 @@ export default function SettingsPage() {
                   <option value="pending">Pending</option>
                 </select>
               </div>
-                </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                   Assign Roles (Multiple Selection)
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto">
                   {roles.map((role) => (
-                    <div
+                    <label
                       key={role.id}
-                      className="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      className={`
+                        flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200
+                        ${editingUser?.roles.includes(role.id)
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
+                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }
+                      `}
                     >
                       <input
                         type="checkbox"
-                        id={`user-role-${role.id}`}
-                        checked={userFormData.roles.includes(role.id)}
-                        onChange={() => toggleUserRole(role.id)}
-                        className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={editingUser?.roles.includes(role.id) || false}
+                        onChange={(e) => {
+                          if (!editingUser) return;
+                          const updatedRoles = e.target.checked
+                            ? [...editingUser.roles, role.id]
+                            : editingUser.roles.filter(r => r !== role.id);
+                          setEditingUser({ ...editingUser, roles: updatedRoles });
+                        }}
+                        className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
                       />
-                      <div className="flex-1">
-                        <label
-                          htmlFor={`user-role-${role.id}`}
-                          className="block text-sm font-medium text-gray-900 dark:text-white cursor-pointer"
-                        >
-                          {role.name}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`font-semibold text-sm ${
+                            editingUser?.roles.includes(role.id)
+                              ? 'text-blue-900 dark:text-blue-100'
+                              : 'text-gray-900 dark:text-white'
+                          }`}>
+                            {role.name}
+                          </span>
                           {role.isSystem && (
-                            <span className="ml-2 px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
+                            <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-0.5 rounded-full font-medium">
                               System
                             </span>
                           )}
-                        </label>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                        </div>
+                        <p className={`text-xs leading-relaxed ${
+                          editingUser?.roles.includes(role.id)
+                            ? 'text-blue-700 dark:text-blue-300'
+                            : 'text-gray-600 dark:text-gray-400'
+                        }`}>
                           {role.description}
                         </p>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {role.permissions.slice(0, 3).map((permission) => (
+                            <span
+                              key={permission}
+                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                editingUser?.roles.includes(role.id)
+                                  ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
+                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                              }`}
+                            >
+                              {permission}
+                            </span>
+                          ))}
+                          {role.permissions.length > 3 && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              editingUser?.roles.includes(role.id)
+                                ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
+                                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                            }`}>
+                              +{role.permissions.length - 3}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </label>
                   ))}
                 </div>
               </div>
             </div>
-              </div>
+
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
               <button
                 onClick={() => setShowUserModal(false)}
