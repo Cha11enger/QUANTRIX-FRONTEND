@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { mockConnections, databaseIcons } from '@/lib/data';
 import {
@@ -36,6 +37,7 @@ interface TreeNode {
 
 export function SchemaSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { activeConnection, setActiveConnection, setSchemaSidebarOpen, sqlEditorTabs, updateSqlTab, activeSqlTab, addSqlTab, setActiveSqlTab, openTabs } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -186,6 +188,17 @@ export function SchemaSidebar() {
     setExpandedNodes(newExpanded);
   };
 
+  const handleTableClick = (node: TreeNode) => {
+    if (node.type === 'table' && node.connectionId) {
+      // Extract database from node ID (format: connectionId-database-tableName)
+      const parts = node.id.split('-');
+      const database = parts[1];
+      const tableName = node.name;
+      
+      // Navigate to table data page
+      router.push(`/table/${node.connectionId}/${database}/${tableName}`);
+    }
+  };
   const handleCreateWorkspace = () => {
     if (newWorkspaceName.trim()) {
       const newWorkspace = {
@@ -524,6 +537,8 @@ export function SchemaSidebar() {
             }
             if (node.type === 'connection') {
               setActiveConnection(node.connectionId || null);
+            } else if (node.type === 'table') {
+              handleTableClick(node);
             }
           }}
         >
