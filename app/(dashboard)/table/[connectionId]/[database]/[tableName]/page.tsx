@@ -3,21 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { mockConnections } from '@/lib/data';
-import {
-  ArrowLeft,
-  Download,
-  Filter,
-  Search,
-  RefreshCw,
-  ChevronLeft,
-  ChevronRight,
-  MoreVertical,
-  Copy,
-  Database,
-  Table as TableIcon,
-  Columns,
-  BarChart3
-} from 'lucide-react';
+import { ArrowLeft, Download, Filter, Search, RefreshCw, ChevronLeft, ChevronRight, MoveVertical as MoreVertical, Copy, Database, Table as TableIcon, Columns2 as Columns, ChartBar as BarChart3 } from 'lucide-react';
 
 // Generate mock data with 15+ columns and 20+ rows
 const generateMockTableData = (tableName: string) => {

@@ -5,25 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { mockConnections, databaseIcons } from '@/lib/data';
-import {
-  ChevronDown,
-  ChevronRight,
-  Search,
-  Database,
-  Table,
-  Columns,
-  RefreshCw,
-  FileText,
-  Calendar,
-  Plus,
-  Check,
-  FolderOpen,
-  GitBranch,
-  MoreVertical,
-  Copy,
-  FolderPlus,
-  Trash2
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, Search, Database, Table, Columns2 as Columns, RefreshCw, FileText, Calendar, Plus, Check, FolderOpen, GitBranch, MoveVertical as MoreVertical, Copy, FolderPlus, Trash2 } from 'lucide-react';
 
 interface TreeNode {
   id: string;
