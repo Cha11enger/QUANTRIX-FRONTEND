@@ -8,6 +8,7 @@ import { User, Mail, Shield, Bell, Moon, Sun, Monitor, Save, Camera, Key, Databa
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
   const { theme, setTheme } = useTheme();
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   
   const [activeTab, setActiveTab] = useState('profile');
   const [profileData, setProfileData] = useState({
@@ -469,60 +470,267 @@ export default function SettingsPage() {
             Create and manage custom roles with specific permissions
           </p>
         </div>
-        <button
-          onClick={handleCreateRole}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          Create Role
-        </button>
+        <div className="flex items-center gap-4">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-600 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <div className="grid grid-cols-2 gap-0.5 w-3 h-3">
+                <div className="bg-current rounded-sm"></div>
+                <div className="bg-current rounded-sm"></div>
+                <div className="bg-current rounded-sm"></div>
+                <div className="bg-current rounded-sm"></div>
+              </div>
+              Grid
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <div className="flex flex-col gap-0.5 w-3 h-3">
+                <div className="bg-current h-0.5 rounded-sm"></div>
+                <div className="bg-current h-0.5 rounded-sm"></div>
+                <div className="bg-current h-0.5 rounded-sm"></div>
+              </div>
+              Table
+            </button>
+          </div>
+          
+          <button
+            onClick={handleCreateRole}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Create Role
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {roles.map((role) => (
-          <div key={role.id} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-semibold text-gray-900 dark:text-white">{role.name}</h4>
-                  {role.isSystem && (
-                    <span className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
-                      System
-                    </span>
-                  )}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {roles.map((role) => (
+            <div key={role.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-semibold text-gray-900 dark:text-white">{role.name}</h4>
+                    {role.isSystem && (
+                      <span className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
+                        System
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{role.description}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {role.userCount} users • Created {new Date(role.createdAt).toLocaleDateString()}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{role.description}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {role.userCount} users • Created {new Date(role.createdAt).toLocaleDateString()}
-                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleEditRole(role)}
+                    disabled={role.isSystem}
+                    className="p-1 text-gray-500 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteRole(role.id)}
+                    disabled={role.isSystem}
+                    className="p-1 text-gray-500 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleEditRole(role)}
-                  disabled={role.isSystem}
-                  className="p-1 text-gray-500 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDeleteRole(role.id)}
-                  disabled={role.isSystem}
-                  className="p-1 text-gray-500 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+              
+              <div className="flex flex-wrap gap-1">
+                {role.permissions.map((permission) => (
+                  <span
+                    key={permission}
+                    className={`px-2 py-1 text-xs rounded-full ${getPermissionColor(permission)}`}
+                  >
+                    {availablePermissions.find(p => p.id === permission)?.name || permission}
+                  </span>
+                ))}
               </div>
             </div>
-            
-            <div className="flex flex-wrap gap-1">
-              {role.permissions.map((permission) => (
-                <span
-                  key={permission}
-                  className={`px-2 py-1 text-xs rounded-full ${getPermissionColor(permission)}`}
-                >
-                  {availablePermissions.find(p => p.id === permission)?.name || permission}
-                </span>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Role
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Description
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Users
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Permissions
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+              {roles.map((role) => (
+                <tr key={role.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-gray-900 dark:text-white">{role.name}</div>
+                      {role.isSystem && (
+                        <span className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
+                          System
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
+                      {role.description}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900 dark:text-white">{role.userCount}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1 max-w-xs">
+                      {role.permissions.slice(0, 3).map((permission) => (
+                        <span
+                          key={permission}
+                          className={`px-2 py-1 text-xs rounded-full ${getPermissionColor(permission)}`}
+                        >
+                          {availablePermissions.find(p => p.id === permission)?.name || permission}
+                        </span>
+                      ))}
+                      {role.permissions.length > 3 && (
+                        <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300 rounded-full">
+                          +{role.permissions.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditRole(role)}
+                        disabled={role.isSystem}
+                        className="p-1 text-gray-500 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRole(role.id)}
+                        disabled={role.isSystem}
+                        className="p-1 text-gray-500 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderDataTab = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Data & Privacy</h3>
+        
+        <div className="space-y-4">
+          <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+            <div className="flex items-center gap-3 mb-3">
+              <Download className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              <p className="font-medium text-gray-900 dark:text-white">Export Data</p>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Download a copy of your data including connections, queries, and chat history.
+            </p>
+            <button className="px-3 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+              Export Data
+            </button>
+          </div>
+
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+            <div className="flex items-center gap-3 mb-3">
+              <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <p className="font-medium text-red-900 dark:text-red-100">Delete Account</p>
+            </div>
+            <p className="text-sm text-red-700 dark:text-red-300 mb-3">
+              Permanently delete your account and all associated data. This action cannot be undone.
+            </p>
+            <button className="px-3 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+              Delete Account
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="h-full bg-white dark:bg-gray-800">
+      <div className="p-6 h-full">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Manage your account preferences and application settings.
+          </p>
+        </div>
+
+        <div className="flex gap-8 h-full">
+          {/* Tabs */}
+          <div className="w-64 flex-shrink-0">
+            <nav className="space-y-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    activeTab === tab.id
+                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 p-6 overflow-auto">
+            {activeTab === 'profile' && renderProfileTab()}
+            {activeTab === 'security' && renderSecurityTab()}
+            {activeTab === 'notifications' && renderNotificationsTab()}
+            {activeTab === 'appearance' && renderAppearanceTab()}
+            {activeTab === 'roles' && renderRolesTab()}
+            {activeTab === 'data' && renderDataTab()}
+          </div>
+        </div>
+      </div>
             </div>
           </div>
         ))}
@@ -567,8 +775,8 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="p-6 max-w-6xl mx-auto">
+    <div className="h-full bg-white dark:bg-gray-800">
+      <div className="p-6 h-full">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
@@ -576,9 +784,9 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex gap-8 h-full">
           {/* Tabs */}
-          <div className="lg:w-64 flex-shrink-0">
+          <div className="w-64 flex-shrink-0">
             <nav className="space-y-1">
               {tabs.map((tab) => (
                 <button
@@ -598,7 +806,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Content */}
-          <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex-1 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 p-6 overflow-auto">
             {activeTab === 'profile' && renderProfileTab()}
             {activeTab === 'security' && renderSecurityTab()}
             {activeTab === 'notifications' && renderNotificationsTab()}
