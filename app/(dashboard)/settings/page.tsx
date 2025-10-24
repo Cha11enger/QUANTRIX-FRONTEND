@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/lib/store';
 import { useTheme } from 'next-themes';
-import { User, Mail, Shield, Bell, Moon, Sun, Monitor, Save, Camera, Key, Database, Download, Trash2, Globe, Smartphone, Plus, CreditCard as Edit, X } from 'lucide-react';
+import { User, Mail, Shield, Bell, Moon, Sun, Monitor, Save, Camera, Key, Database, Download, Trash2, Globe, Smartphone, Plus, X, Users, Edit, Check, AlertTriangle } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
@@ -32,11 +32,71 @@ export default function SettingsPage() {
     loginAlerts: true
   });
 
+  // Roles management state
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [editingRole, setEditingRole] = useState<any>(null);
+  const [roleFormData, setRoleFormData] = useState({
+    name: '',
+    description: '',
+    permissions: [] as string[]
+  });
+
+  const [roles, setRoles] = useState([
+    {
+      id: '1',
+      name: 'Admin',
+      description: 'Full system access with all permissions',
+      permissions: ['read', 'write', 'delete', 'query', 'export', 'manage_users', 'manage_connections', 'system_admin'],
+      userCount: 2,
+      isSystem: true,
+      createdAt: '2024-01-01'
+    },
+    {
+      id: '2',
+      name: 'Editor',
+      description: 'Can read, write, and query data',
+      permissions: ['read', 'write', 'query', 'export'],
+      userCount: 5,
+      isSystem: true,
+      createdAt: '2024-01-01'
+    },
+    {
+      id: '3',
+      name: 'Viewer',
+      description: 'Read-only access to data',
+      permissions: ['read', 'query'],
+      userCount: 12,
+      isSystem: true,
+      createdAt: '2024-01-01'
+    },
+    {
+      id: '4',
+      name: 'Data Analyst',
+      description: 'Custom role for data analysis team',
+      permissions: ['read', 'query', 'export'],
+      userCount: 3,
+      isSystem: false,
+      createdAt: '2024-01-15'
+    }
+  ]);
+
+  const availablePermissions = [
+    { id: 'read', name: 'Read', description: 'View data and schemas' },
+    { id: 'write', name: 'Write', description: 'Create and modify data' },
+    { id: 'delete', name: 'Delete', description: 'Remove data and objects' },
+    { id: 'query', name: 'Query', description: 'Execute SQL queries' },
+    { id: 'export', name: 'Export', description: 'Export data to files' },
+    { id: 'manage_users', name: 'Manage Users', description: 'Add, edit, and remove users' },
+    { id: 'manage_connections', name: 'Manage Connections', description: 'Configure database connections' },
+    { id: 'system_admin', name: 'System Admin', description: 'Full system administration' }
+  ];
+
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'appearance', label: 'Appearance', icon: Monitor },
+    { id: 'roles', label: 'Roles Management', icon: Users },
     { id: 'data', label: 'Data & Privacy', icon: Database }
   ];
 
@@ -46,14 +106,12 @@ export default function SettingsPage() {
       email: profileData.email,
       avatar: profileData.avatar
     });
-    // Simulate save
     console.log('Profile saved:', profileData);
   };
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // In a real app, you'd upload to a server
       const reader = new FileReader();
       reader.onload = (e) => {
         setProfileData(prev => ({
@@ -65,12 +123,81 @@ export default function SettingsPage() {
     }
   };
 
+  const handleCreateRole = () => {
+    setEditingRole(null);
+    setRoleFormData({ name: '', description: '', permissions: [] });
+    setShowRoleModal(true);
+  };
+
+  const handleEditRole = (role: any) => {
+    setEditingRole(role);
+    setRoleFormData({
+      name: role.name,
+      description: role.description,
+      permissions: role.permissions
+    });
+    setShowRoleModal(true);
+  };
+
+  const handleSaveRole = () => {
+    if (!roleFormData.name.trim()) return;
+
+    if (editingRole) {
+      // Update existing role
+      setRoles(prev => prev.map(role => 
+        role.id === editingRole.id 
+          ? { ...role, ...roleFormData }
+          : role
+      ));
+    } else {
+      // Create new role
+      const newRole = {
+        id: Date.now().toString(),
+        ...roleFormData,
+        userCount: 0,
+        isSystem: false,
+        createdAt: new Date().toISOString().split('T')[0]
+      };
+      setRoles(prev => [...prev, newRole]);
+    }
+
+    setShowRoleModal(false);
+    setRoleFormData({ name: '', description: '', permissions: [] });
+    setEditingRole(null);
+  };
+
+  const handleDeleteRole = (roleId: string) => {
+    setRoles(prev => prev.filter(role => role.id !== roleId));
+  };
+
+  const togglePermission = (permissionId: string) => {
+    setRoleFormData(prev => ({
+      ...prev,
+      permissions: prev.permissions.includes(permissionId)
+        ? prev.permissions.filter(p => p !== permissionId)
+        : [...prev.permissions, permissionId]
+    }));
+  };
+
+  const getPermissionColor = (permission: string) => {
+    const colors: { [key: string]: string } = {
+      read: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      write: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      delete: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      query: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      export: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      manage_users: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+      manage_connections: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
+      system_admin: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+    };
+    return colors[permission] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+  };
+
   const renderProfileTab = () => (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Profile Information</h3>
         
-        {/* Avatar */}
         <div className="flex items-center gap-4 mb-6">
           <div className="relative">
             <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
@@ -104,7 +231,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Form */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -334,6 +460,76 @@ export default function SettingsPage() {
     </div>
   );
 
+  const renderRolesTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Roles Management</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Create and manage custom roles with specific permissions
+          </p>
+        </div>
+        <button
+          onClick={handleCreateRole}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+        >
+          <Plus className="w-4 h-4" />
+          Create Role
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {roles.map((role) => (
+          <div key={role.id} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">{role.name}</h4>
+                  {role.isSystem && (
+                    <span className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded">
+                      System
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{role.description}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {role.userCount} users • Created {new Date(role.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleEditRole(role)}
+                  disabled={role.isSystem}
+                  className="p-1 text-gray-500 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDeleteRole(role.id)}
+                  disabled={role.isSystem}
+                  className="p-1 text-gray-500 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-1">
+              {role.permissions.map((permission) => (
+                <span
+                  key={permission}
+                  className={`px-2 py-1 text-xs rounded-full ${getPermissionColor(permission)}`}
+                >
+                  {availablePermissions.find(p => p.id === permission)?.name || permission}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const renderDataTab = () => (
     <div className="space-y-6">
       <div>
@@ -371,48 +567,146 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Manage your account preferences and application settings.
-        </p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="p-6 max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Manage your account preferences and application settings.
+          </p>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Tabs */}
+          <div className="lg:w-64 flex-shrink-0">
+            <nav className="space-y-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    activeTab === tab.id
+                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            {activeTab === 'profile' && renderProfileTab()}
+            {activeTab === 'security' && renderSecurityTab()}
+            {activeTab === 'notifications' && renderNotificationsTab()}
+            {activeTab === 'appearance' && renderAppearanceTab()}
+            {activeTab === 'roles' && renderRolesTab()}
+            {activeTab === 'data' && renderDataTab()}
+          </div>
+        </div>
       </div>
 
-          <div className="flex flex-col lg:flex-row gap-8">
-        {/* Tabs */}
-            <div className="lg:w-64 flex-shrink-0">
-          <nav className="space-y-1">
-            {tabs.map((tab) => (
+      {/* Role Modal */}
+      {showRoleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {editingRole ? 'Edit Role' : 'Create New Role'}
+                </h2>
+                <button
+                  onClick={() => setShowRoleModal(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Role Name
+                </label>
+                <input
+                  type="text"
+                  value={roleFormData.name}
+                  onChange={(e) => setRoleFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter role name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={roleFormData.description}
+                  onChange={(e) => setRoleFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Describe this role's purpose"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Permissions
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {availablePermissions.map((permission) => (
+                    <div
+                      key={permission.id}
+                      className="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        id={permission.id}
+                        checked={roleFormData.permissions.includes(permission.id)}
+                        onChange={() => togglePermission(permission.id)}
+                        className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <label
+                          htmlFor={permission.id}
+                          className="block text-sm font-medium text-gray-900 dark:text-white cursor-pointer"
+                        >
+                          {permission.name}
+                        </label>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {permission.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
+                onClick={() => setShowRoleModal(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
+                Cancel
               </button>
-            ))}
-          </nav>
+              <button
+                onClick={handleSaveRole}
+                disabled={!roleFormData.name.trim()}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                {editingRole ? 'Update Role' : 'Create Role'}
+              </button>
+            </div>
+          </div>
         </div>
-
-        {/* Content */}
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          {activeTab === 'profile' && renderProfileTab()}
-          {activeTab === 'security' && renderSecurityTab()}
-          {activeTab === 'notifications' && renderNotificationsTab()}
-          {activeTab === 'appearance' && renderAppearanceTab()}
-          {activeTab === 'data' && renderDataTab()}
-        </div>
-      </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
