@@ -208,11 +208,28 @@ export function IconSidebar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent 
-            align="center" 
-            side="right" 
+            align="start" 
+            side="top" 
             className="w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
-            sideOffset={8}
+            sideOffset={12}
           >
+            {/* User Info Header */}
+            <div className="px-3 py-3 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">
+                  {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {user?.name || 'User'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {currentRole}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Switch Role with Submenu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -274,6 +291,54 @@ export function IconSidebar() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Account Section */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                      <span className="text-xs font-bold text-orange-600 dark:text-orange-400">🏢</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-900 dark:text-white">Account</span>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">RQB55567</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                side="right" 
+                align="start"
+                className="w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
+                sideOffset={4}
+              >
+                <div className="p-4">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">TRCSVVO</h3>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">RQB55567</span>
+                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        RANJITHRJ - 🇺🇸 US West (Oregon)
+                      </p>
+                      <button className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                        View account details
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                    <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Into Another Account</span>
+                    </button>
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {/* Settings */}
             <DropdownMenuItem 
               onClick={() => {
