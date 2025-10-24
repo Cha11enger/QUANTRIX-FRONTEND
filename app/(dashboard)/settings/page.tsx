@@ -42,6 +42,60 @@ export default function SettingsPage() {
     permissions: [] as string[]
   });
 
+  // User management state
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [userFormData, setUserFormData] = useState({
+    name: '',
+    email: '',
+    roles: [] as string[],
+    status: 'active'
+  });
+  const [userViewMode, setUserViewMode] = useState<'grid' | 'table'>('grid');
+
+  const [users, setUsers] = useState([
+    {
+      id: '1',
+      name: 'John Smith',
+      email: 'john.smith@company.com',
+      roles: ['1', '2'], // Admin, Editor
+      status: 'active',
+      lastLogin: '2024-01-15T10:30:00Z',
+      createdAt: '2024-01-01',
+      avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face'
+    },
+    {
+      id: '2',
+      name: 'Sarah Johnson',
+      email: 'sarah.johnson@company.com',
+      roles: ['2'], // Editor
+      status: 'active',
+      lastLogin: '2024-01-14T15:45:00Z',
+      createdAt: '2024-01-05',
+      avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face'
+    },
+    {
+      id: '3',
+      name: 'Mike Davis',
+      email: 'mike.davis@company.com',
+      roles: ['3', '4'], // Viewer, Data Analyst
+      status: 'inactive',
+      lastLogin: '2024-01-10T09:20:00Z',
+      createdAt: '2024-01-08',
+      avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face'
+    },
+    {
+      id: '4',
+      name: 'Emily Chen',
+      email: 'emily.chen@company.com',
+      roles: ['4'], // Data Analyst
+      status: 'pending',
+      lastLogin: null,
+      createdAt: '2024-01-12',
+      avatar: 'https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face'
+    }
+  ]);
+
   const [roles, setRoles] = useState([
     {
       id: '1',
@@ -98,6 +152,7 @@ export default function SettingsPage() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'appearance', label: 'Appearance', icon: Monitor },
     { id: 'roles', label: 'Roles Management', icon: Users },
+    { id: 'users', label: 'User Management', icon: User },
     { id: 'data', label: 'Data & Privacy', icon: Database }
   ];
 
@@ -169,6 +224,84 @@ export default function SettingsPage() {
 
   const handleDeleteRole = (roleId: string) => {
     setRoles(prev => prev.filter(role => role.id !== roleId));
+  };
+
+  // User management functions
+  const handleCreateUser = () => {
+    setEditingUser(null);
+    setUserFormData({ name: '', email: '', roles: [], status: 'active' });
+    setShowUserModal(true);
+  };
+
+  const handleEditUser = (user: any) => {
+    setEditingUser(user);
+    setUserFormData({
+      name: user.name,
+      email: user.email,
+      roles: user.roles,
+      status: user.status
+    });
+    setShowUserModal(true);
+  };
+
+  const handleSaveUser = () => {
+    if (!userFormData.name.trim() || !userFormData.email.trim()) return;
+
+    if (editingUser) {
+      // Update existing user
+      setUsers(prev => prev.map(user => 
+        user.id === editingUser.id 
+          ? { ...user, ...userFormData }
+          : user
+      ));
+    } else {
+      // Create new user
+      const newUser = {
+        id: Date.now().toString(),
+        ...userFormData,
+        lastLogin: null,
+        createdAt: new Date().toISOString().split('T')[0],
+        avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face'
+      };
+      setUsers(prev => [...prev, newUser]);
+    }
+
+    setShowUserModal(false);
+    setUserFormData({ name: '', email: '', roles: [], status: 'active' });
+    setEditingUser(null);
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    setUsers(prev => prev.filter(user => user.id !== userId));
+  };
+
+  const toggleUserRole = (roleId: string) => {
+    setUserFormData(prev => ({
+      ...prev,
+      roles: prev.roles.includes(roleId)
+        ? prev.roles.filter(r => r !== roleId)
+        : [...prev.roles, roleId]
+    }));
+  };
+
+  const getUserRoleNames = (roleIds: string[]) => {
+    return roleIds.map(roleId => {
+      const role = roles.find(r => r.id === roleId);
+      return role ? role.name : 'Unknown';
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'inactive':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    }
   };
 
   const togglePermission = (permissionId: string) => {
