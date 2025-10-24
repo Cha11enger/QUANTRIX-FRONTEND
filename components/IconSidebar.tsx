@@ -2,21 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import {
-  Database,
-  Home,
-  Code,
-  MessageSquare,
-  Settings,
-  Sun,
-  Moon,
-  LogOut,
-  Menu,
-  X,
-  ChevronDown,
-  Check,
-  User
-} from 'lucide-react';
+import { Database, Chrome as Home, Code, MessageSquare, Settings, Sun, Moon, LogOut, Menu, X, ChevronDown, ChevronRight, Check, User, Copy } from 'lucide-react';
 import { useAuthStore, useAppStore } from '@/lib/store';
 import { mockConnections } from '@/lib/data';
 import { AuthService } from '@/lib/api';
@@ -25,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -41,7 +28,6 @@ const navigation = [
   { name: 'Connections', href: '/connections', icon: Database },
   { name: 'SQL Editor', href: '/sql-editor', icon: Code },
   { name: 'AI Chat', href: '/ai-chat', icon: MessageSquare },
-  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 // Separate component for the role dropdown to isolate state changes
@@ -128,6 +114,8 @@ export function IconSidebar() {
   const { activeConnection, currentRole, setCurrentRole } = useAppStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [accountDetailsOpen, setAccountDetailsOpen] = useState(false);
   
   // Get available roles from the active connection
   const activeConn = mockConnections.find(conn => conn.id === activeConnection);
@@ -208,7 +196,7 @@ export function IconSidebar() {
         </button>
 
         {/* Role Switching Dropdown */}
-        <DropdownMenu open={roleDropdownOpen} onOpenChange={setRoleDropdownOpen}>
+        <DropdownMenu open={profileDropdownOpen} onOpenChange={setProfileDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <button className="group relative p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
               {user?.avatar ? (
@@ -230,54 +218,159 @@ export function IconSidebar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent 
-            align="center" 
-            side="right" 
-            className="w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
-            sideOffset={8}
+            align="start" 
+            side="top" 
+            className="w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
+            sideOffset={12}
           >
-            <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-2">
-                {user?.avatar ? (
-                  <div className="w-8 h-8 rounded-full overflow-hidden">
-                    <img 
-                      src={user.avatar} 
-                      alt={user.name} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                    <User className="w-4 h-4 text-gray-400" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+            {/* User Info Header */}
+            <div className="px-3 py-3 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">
+                  {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {user?.name || 'User'}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Switch Role
+                    {currentRole}
                   </p>
                 </div>
               </div>
             </div>
-            <RoleDropdown
-              user={user}
-              currentRole={currentRole}
-              setCurrentRole={setCurrentRole}
-              availableRoles={availableRoles}
-              setRoleDropdownOpen={setRoleDropdownOpen}
-            />
+
+            {/* Switch Role with Submenu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    <span className="text-gray-900 dark:text-white">Switch Role</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                side="right" 
+                align="start"
+                className="w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
+                sideOffset={4}
+              >
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Run as role...
+                  </p>
+                </div>
+                <Command className="bg-transparent">
+                  <CommandInput
+                    placeholder="Search roles..."
+                    className="h-8"
+                  />
+                  <CommandList className="max-h-60">
+                    <CommandEmpty>No roles found.</CommandEmpty>
+                    <CommandGroup>
+                      {availableRoles.map((role) => (
+                        <CommandItem
+                          key={role}
+                          onSelect={() => {
+                            setCurrentRole(role);
+                            setProfileDropdownOpen(false);
+                          }}
+                          className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 rounded bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                <Database className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <span className="text-gray-900 dark:text-white">{role}</span>
+                            </div>
+                            {currentRole === role && (
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-blue-600 dark:text-blue-400">Default</span>
+                                <Check className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                              </div>
+                            )}
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Account Section */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                      <span className="text-xs font-bold text-orange-600 dark:text-orange-400">🏢</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-900 dark:text-white">Account</span>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">RQB55567</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                side="right" 
+                align="start"
+                className="w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
+                sideOffset={4}
+              >
+                <div className="p-4">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">TRCSVVO</h3>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">RQB55567</span>
+                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        RANJITHRJ - 🇺🇸 US West (Oregon)
+                      </p>
+                      <button 
+                        onClick={() => {
+                          setAccountDetailsOpen(true);
+                          setProfileDropdownOpen(false);
+                        }}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        View account details
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                    <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Into Another Account</span>
+                    </button>
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {/* Settings */}
+            <DropdownMenuItem 
+              onClick={() => {
+                router.push('/settings');
+                setProfileDropdownOpen(false);
+              }}
+              className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-gray-900 dark:text-white">Settings</span>
+              </div>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="p-3 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-300 transition-all duration-200"
-          title="Logout"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
       </div>
     </>
   );
@@ -312,6 +405,77 @@ export function IconSidebar() {
             <NavContent />
           </div>
         </>
+      )}
+
+      {/* Account Details Modal */}
+      {accountDetailsOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-700">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-white mx-auto">Account Details</h2>
+                <button
+                  onClick={() => setAccountDetailsOpen(false)}
+                  className="text-gray-400 hover:text-white transition-colors absolute right-6"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* Account Details Table */}
+                <div className="space-y-4">
+                  {[
+                    { name: 'Account identifier', value: 'TRCSVVO-RQB55567', hasIcon: true },
+                    { name: 'Data sharing account identifier', value: 'TRCSVVO.RQB55567', hasIcon: true },
+                    { name: 'Organization name', value: 'TRCSVVO', hasIcon: true },
+                    { name: 'Account name', value: 'RQB55567', hasIcon: true },
+                    { name: 'Account/Server URL', value: 'TRCSVVO-RQB55567.snowflakecomputing.com', hasIcon: true },
+                    { name: 'Login name', value: 'RANJITHRJ', hasIcon: true },
+                    { name: 'Role', value: 'ACCOUNTADMIN', hasIcon: true },
+                    { name: 'Account locator', value: 'KEB70244', hasIcon: true },
+                    { name: 'Cloud platform', value: 'AWS', hasIcon: true },
+                    { name: 'Edition', value: 'Enterprise', hasIcon: true }
+                  ].map((item, index) => (
+                    <div key={index} className="flex items-center justify-between py-3 border-b border-gray-700 last:border-b-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-300 font-medium">{item.name}</span>
+                        {item.hasIcon && (
+                          <div className="w-4 h-4 rounded-full bg-gray-600 flex items-center justify-center">
+                            <span className="text-xs text-gray-400">?</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-white font-mono">{item.value}</span>
+                        <button className="text-gray-400 hover:text-white transition-colors">
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-700 flex items-center justify-between">
+              <button className="text-blue-400 hover:text-blue-300 text-sm transition-colors">
+                Learn more
+              </button>
+              <button
+                onClick={() => setAccountDetailsOpen(false)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

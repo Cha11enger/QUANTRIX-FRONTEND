@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { SettingsLayout } from '@/components/settings/SettingsLayout';
 import { RolesManagement } from '@/components/settings/RolesManagement';
 import { UserManagement } from '@/components/settings/UserManagement';
@@ -96,7 +97,8 @@ const mockProfile = {
 };
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState('profile');
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
   const [roles, setRoles] = useState(mockRoles);
   const [users, setUsers] = useState(mockUsers);
   const [profile, setProfile] = useState(mockProfile);
