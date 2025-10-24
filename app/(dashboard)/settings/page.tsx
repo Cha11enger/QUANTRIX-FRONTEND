@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/lib/store';
 import { useTheme } from 'next-themes';
-import { User, Mail, Shield, Bell, Moon, Sun, Monitor, Save, Camera, Key, Database, Download, Trash2, Globe, Smartphone, Plus, X, Users, CreditCard as Edit, Check, TriangleAlert as AlertTriangle } from 'lucide-react';
+import { User, Mail, Shield, Bell, Moon, Sun, Monitor, Save, Camera, Key, Database, Download, Trash2, Globe, Smartphone, Plus, X, Users, Edit, Check, AlertTriangle } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
@@ -659,91 +659,6 @@ export default function SettingsPage() {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Data & Privacy</h3>
         
         <div className="space-y-4">
-          <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
-            <div className="flex items-center gap-3 mb-3">
-              <Download className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              <p className="font-medium text-gray-900 dark:text-white">Export Data</p>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Download a copy of your data including connections, queries, and chat history.
-            </p>
-            <button className="px-3 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-              Export Data
-            </button>
-          </div>
-
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-            <div className="flex items-center gap-3 mb-3">
-              <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
-              <p className="font-medium text-red-900 dark:text-red-100">Delete Account</p>
-            </div>
-            <p className="text-sm text-red-700 dark:text-red-300 mb-3">
-              Permanently delete your account and all associated data. This action cannot be undone.
-            </p>
-            <button className="px-3 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-              Delete Account
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="h-full bg-white dark:bg-gray-800">
-      <div className="p-6 h-full">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage your account preferences and application settings.
-          </p>
-        </div>
-
-        <div className="flex gap-8 h-full">
-          {/* Tabs */}
-          <div className="w-64 flex-shrink-0">
-            <nav className="space-y-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 p-6 overflow-auto">
-            {activeTab === 'profile' && renderProfileTab()}
-            {activeTab === 'security' && renderSecurityTab()}
-            {activeTab === 'notifications' && renderNotificationsTab()}
-            {activeTab === 'appearance' && renderAppearanceTab()}
-            {activeTab === 'roles' && renderRolesTab()}
-            {activeTab === 'data' && renderDataTab()}
-          </div>
-        </div>
-      </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderDataTab = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Data & Privacy</h3>
-        
-        <div className="space-y-4">
           <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
             <div className="flex items-center gap-3 mb-3">
               <Download className="w-5 h-5 text-gray-600 dark:text-gray-300" />
@@ -775,8 +690,9 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="h-full bg-white dark:bg-gray-800">
-      <div className="p-6 h-full">
+    <div className="h-full bg-white dark:bg-gray-800 flex">
+      {/* Sidebar */}
+      <div className="w-64 flex-shrink-0 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-6">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
@@ -784,37 +700,32 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <div className="flex gap-8 h-full">
-          {/* Tabs */}
-          <div className="w-64 flex-shrink-0">
-            <nav className="space-y-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
+        <nav className="space-y-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
 
-          {/* Content */}
-          <div className="flex-1 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 p-6 overflow-auto">
-            {activeTab === 'profile' && renderProfileTab()}
-            {activeTab === 'security' && renderSecurityTab()}
-            {activeTab === 'notifications' && renderNotificationsTab()}
-            {activeTab === 'appearance' && renderAppearanceTab()}
-            {activeTab === 'roles' && renderRolesTab()}
-            {activeTab === 'data' && renderDataTab()}
-          </div>
-        </div>
+      {/* Content */}
+      <div className="flex-1 p-6 overflow-auto">
+        {activeTab === 'profile' && renderProfileTab()}
+        {activeTab === 'security' && renderSecurityTab()}
+        {activeTab === 'notifications' && renderNotificationsTab()}
+        {activeTab === 'appearance' && renderAppearanceTab()}
+        {activeTab === 'roles' && renderRolesTab()}
+        {activeTab === 'data' && renderDataTab()}
       </div>
 
       {/* Role Modal */}
