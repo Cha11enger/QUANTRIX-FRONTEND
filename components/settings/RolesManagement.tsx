@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Shield, Grid3X3, List, X } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Shield, Grid3x3 as Grid3X3, List, X } from 'lucide-react';
 
 interface Role {
   id: string;
