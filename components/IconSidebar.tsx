@@ -403,23 +403,14 @@ export function IconSidebar() {
           <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-700">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-white">Account Details</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-white mx-auto">Account Details</h2>
                 <button
                   onClick={() => setAccountDetailsOpen(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
+                  className="text-gray-400 hover:text-white transition-colors absolute right-6"
                 >
                   <X className="w-6 h-6" />
                 </button>
-              </div>
-              {/* Progress bar */}
-              <div className="mt-4">
-                <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <span className="text-blue-400">Account</span>
-                  <div className="flex-1 h-1 bg-gray-700 rounded">
-                    <div className="h-1 bg-red-500 rounded" style={{ width: '30%' }}></div>
-                  </div>
-                </div>
               </div>
             </div>
 
