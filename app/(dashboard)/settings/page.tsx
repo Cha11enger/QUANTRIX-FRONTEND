@@ -18,7 +18,10 @@ import {
   Download,
   Trash2,
   Globe,
-  Smartphone
+  Smartphone,
+  Plus,
+  Edit,
+  X
 } from 'lucide-react';
 
 export default function SettingsPage() {
