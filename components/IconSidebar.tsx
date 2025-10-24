@@ -24,6 +24,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -127,6 +128,7 @@ export function IconSidebar() {
   const { activeConnection, currentRole, setCurrentRole } = useAppStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   
   // Get available roles from the active connection
   const activeConn = mockConnections.find(conn => conn.id === activeConnection);
@@ -198,7 +200,7 @@ export function IconSidebar() {
         </button>
 
         {/* Role Switching Dropdown */}
-        <DropdownMenu open={roleDropdownOpen} onOpenChange={setRoleDropdownOpen}>
+        <DropdownMenu open={profileDropdownOpen} onOpenChange={setProfileDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <button className="group relative p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800">
               {user?.avatar ? (
@@ -222,9 +224,10 @@ export function IconSidebar() {
           <DropdownMenuContent 
             align="center" 
             side="right" 
-            className="w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
+            className="w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
             sideOffset={8}
           >
+            {/* User Info Section */}
             <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2">
                 {user?.avatar ? (
@@ -244,10 +247,68 @@ export function IconSidebar() {
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                     {user?.name || 'User'}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Switch Role
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {user?.email || 'user@example.com'}
                   </p>
                 </div>
+              </div>
+            </div>
+            
+            {/* Account Section */}
+            <div className="py-1">
+              <div className="px-3 py-1">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Account
+                </span>
+              </div>
+              <DropdownMenuItem 
+                onClick={() => {
+                  router.push('/settings?tab=profile');
+                  setProfileDropdownOpen(false);
+                }}
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-gray-900 dark:text-white">Profile Settings</span>
+                </div>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                onClick={() => {
+                  router.push('/settings?tab=security');
+                  setProfileDropdownOpen(false);
+                }}
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-gray-900 dark:text-white">Account Settings</span>
+                </div>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                onClick={() => {
+                  router.push('/settings?tab=appearance');
+                  setProfileDropdownOpen(false);
+                }}
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <div className="flex items-center gap-2">
+                  <Sun className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-gray-900 dark:text-white">Appearance</span>
+                </div>
+              </DropdownMenuItem>
+            </div>
+            
+            <DropdownMenuSeparator />
+            
+            {/* Role Switching Section */}
+            <div className="py-1">
+              <div className="px-3 py-1">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Switch Role
+                </span>
               </div>
             </div>
             <RoleDropdown
@@ -255,19 +316,65 @@ export function IconSidebar() {
               currentRole={currentRole}
               setCurrentRole={setCurrentRole}
               availableRoles={availableRoles}
-              setRoleDropdownOpen={setRoleDropdownOpen}
+              setRoleDropdownOpen={setProfileDropdownOpen}
             />
+            
+            <DropdownMenuSeparator />
+            
+            {/* Management Section (for admin users) */}
+            <div className="py-1">
+              <div className="px-3 py-1">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Management
+                </span>
+              </div>
+              <DropdownMenuItem 
+                onClick={() => {
+                  router.push('/settings?tab=users');
+                  setProfileDropdownOpen(false);
+                }}
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-gray-900 dark:text-white">User Management</span>
+                </div>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                onClick={() => {
+                  router.push('/settings?tab=roles');
+                  setProfileDropdownOpen(false);
+                }}
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-gray-900 dark:text-white">Roles Management</span>
+                </div>
+              </DropdownMenuItem>
+            </div>
+            
+            <DropdownMenuSeparator />
+            
+            {/* Sign Out */}
+            <div className="py-1">
+              <DropdownMenuItem 
+                onClick={() => {
+                  handleLogout();
+                  setProfileDropdownOpen(false);
+                }}
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+              >
+                <div className="flex items-center gap-2">
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </div>
+              </DropdownMenuItem>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="p-3 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-300 transition-all duration-200"
-          title="Logout"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
       </div>
     </>
   );
