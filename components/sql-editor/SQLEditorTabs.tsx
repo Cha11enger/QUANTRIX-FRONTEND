@@ -2,14 +2,7 @@
 
 import { useRef } from 'react';
 import { useAppStore } from '@/lib/store';
-import {
-  Plus,
-  X,
-  FileText,
-  Copy,
-  Trash2,
-  MoreHorizontal
-} from 'lucide-react';
+import { Plus, X, FileText, Copy, Trash2, MoveHorizontal as MoreHorizontal } from 'lucide-react';
 
 interface SQLEditorTabsProps {
   tabContextMenus: { [key: string]: boolean };

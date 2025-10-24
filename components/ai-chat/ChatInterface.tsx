@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2, Copy, CheckCheck } from 'lucide-react';
+import { Send, Bot, User, Loader as Loader2, Copy, CheckCheck } from 'lucide-react';
 
 interface ChatMessage {
   id: string;

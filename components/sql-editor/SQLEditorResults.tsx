@@ -1,13 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  BarChart3,
-  Clock,
-  Download,
-  Copy,
-  X
-} from 'lucide-react';
+import { ChartBar as BarChart3, Clock, Download, Copy, X } from 'lucide-react';
 
 interface SQLEditorResultsProps {
   queryResults: any;
