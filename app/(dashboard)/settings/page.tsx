@@ -822,6 +822,214 @@ export default function SettingsPage() {
     </div>
   );
 
+  const renderUsersTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">User Management</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Manage child users and assign roles to control their access
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-600 rounded-lg p-1">
+            <button
+              onClick={() => setUserViewMode('grid')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                userViewMode === 'grid'
+                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <div className="grid grid-cols-2 gap-0.5 w-3 h-3">
+                <div className="bg-current rounded-sm"></div>
+                <div className="bg-current rounded-sm"></div>
+                <div className="bg-current rounded-sm"></div>
+                <div className="bg-current rounded-sm"></div>
+              </div>
+              Grid
+            </button>
+            <button
+              onClick={() => setUserViewMode('table')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                userViewMode === 'table'
+                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <div className="flex flex-col gap-0.5 w-3 h-3">
+                <div className="bg-current h-0.5 rounded-sm"></div>
+                <div className="bg-current h-0.5 rounded-sm"></div>
+                <div className="bg-current h-0.5 rounded-sm"></div>
+              </div>
+              Table
+            </button>
+          </div>
+          
+          <button
+            onClick={handleCreateUser}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Add User
+          </button>
+        </div>
+      </div>
+
+      {userViewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {users.map((user) => (
+            <div key={user.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+                    <img 
+                      src={user.avatar} 
+                      alt={user.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">{user.name}</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleEditUser(user)}
+                    className="p-1 text-gray-500 hover:text-blue-600"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteUser(user.id)}
+                    className="p-1 text-gray-500 hover:text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="mb-3">
+                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(user.status)}`}>
+                  {user.status}
+                </span>
+              </div>
+              
+              <div className="mb-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Roles:</p>
+                <div className="flex flex-wrap gap-1">
+                  {getUserRoleNames(user.roles).map((roleName, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full"
+                    >
+                      {roleName}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                <p>Last login: {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</p>
+                <p>Created: {new Date(user.createdAt).toLocaleDateString()}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Roles
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Last Login
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+              {users.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+                        <img 
+                          src={user.avatar} 
+                          alt={user.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">{user.name}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">{user.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(user.status)}`}>
+                      {user.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1 max-w-xs">
+                      {getUserRoleNames(user.roles).slice(0, 2).map((roleName, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full"
+                        >
+                          {roleName}
+                        </span>
+                      ))}
+                      {user.roles.length > 2 && (
+                        <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300 rounded-full">
+                          +{user.roles.length - 2} more
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900 dark:text-white">
+                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditUser(user)}
+                        className="p-1 text-gray-500 hover:text-blue-600"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="p-1 text-gray-500 hover:text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="h-full bg-white dark:bg-gray-800 flex">
       {/* Sidebar */}
@@ -858,6 +1066,7 @@ export default function SettingsPage() {
         {activeTab === 'notifications' && renderNotificationsTab()}
         {activeTab === 'appearance' && renderAppearanceTab()}
         {activeTab === 'roles' && renderRolesTab()}
+        {activeTab === 'users' && renderUsersTab()}
         {activeTab === 'data' && renderDataTab()}
       </div>
 
