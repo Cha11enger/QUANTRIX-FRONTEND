@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/lib/store';
 import { useTheme } from 'next-themes';
-import { User, Mail, Shield, Bell, Moon, Sun, Monitor, Save, Camera, Key, Database, Download, Trash2, Globe, Smartphone, Plus, X, Users, Edit, Check, AlertTriangle } from 'lucide-react';
+import { User, Mail, Shield, Bell, Moon, Sun, Monitor, Save, Camera, Key, Database, Download, Trash2, Globe, Smartphone, Plus, X, Users, CreditCard as Edit, Check, TriangleAlert as AlertTriangle } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
