@@ -118,9 +118,9 @@ export default function TableDataPage() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-800">
       {/* Header */}
-      <div className="flex-shrink-0 p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex-shrink-0 p-6 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <button
@@ -196,7 +196,7 @@ export default function TableDataPage() {
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800">
+      <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900">
         <div className="h-full overflow-auto">
           <table className="w-full min-w-max">
             <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
@@ -294,7 +294,7 @@ export default function TableDataPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex-shrink-0 px-6 py-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex-shrink-0 px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-600 dark:text-gray-400">
