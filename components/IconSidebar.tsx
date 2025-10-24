@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Database, Chrome as Home, Code, MessageSquare, Settings, Sun, Moon, LogOut, Menu, X, ChevronDown, ChevronRight, Check, User } from 'lucide-react';
+import { Database, Chrome as Home, Code, MessageSquare, Settings, Sun, Moon, LogOut, Menu, X, ChevronDown, ChevronRight, Check, User, Copy } from 'lucide-react';
 import { useAuthStore, useAppStore } from '@/lib/store';
 import { mockConnections } from '@/lib/data';
 import { useState, useCallback, useMemo, forwardRef } from 'react';
@@ -27,7 +27,6 @@ const navigation = [
   { name: 'Connections', href: '/connections', icon: Database },
   { name: 'SQL Editor', href: '/sql-editor', icon: Code },
   { name: 'AI Chat', href: '/ai-chat', icon: MessageSquare },
-  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 // Separate component for the role dropdown to isolate state changes
@@ -115,6 +114,7 @@ export function IconSidebar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [accountDetailsOpen, setAccountDetailsOpen] = useState(false);
   
   // Get available roles from the active connection
   const activeConn = mockConnections.find(conn => conn.id === activeConnection);
@@ -324,7 +324,13 @@ export function IconSidebar() {
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         RANJITHRJ - 🇺🇸 US West (Oregon)
                       </p>
-                      <button className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                      <button 
+                        onClick={() => {
+                          setAccountDetailsOpen(true);
+                          setProfileDropdownOpen(false);
+                        }}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      >
                         View account details
                       </button>
                     </div>
@@ -389,6 +395,86 @@ export function IconSidebar() {
             <NavContent />
           </div>
         </>
+      )}
+
+      {/* Account Details Modal */}
+      {accountDetailsOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-white">Account Details</h2>
+                <button
+                  onClick={() => setAccountDetailsOpen(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              {/* Progress bar */}
+              <div className="mt-4">
+                <div className="flex items-center gap-2 text-sm text-gray-300">
+                  <span className="text-blue-400">Account</span>
+                  <div className="flex-1 h-1 bg-gray-700 rounded">
+                    <div className="h-1 bg-red-500 rounded" style={{ width: '30%' }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* Account Details Table */}
+                <div className="space-y-4">
+                  {[
+                    { name: 'Account identifier', value: 'TRCSVVO-RQB55567', hasIcon: true },
+                    { name: 'Data sharing account identifier', value: 'TRCSVVO.RQB55567', hasIcon: true },
+                    { name: 'Organization name', value: 'TRCSVVO', hasIcon: true },
+                    { name: 'Account name', value: 'RQB55567', hasIcon: true },
+                    { name: 'Account/Server URL', value: 'TRCSVVO-RQB55567.snowflakecomputing.com', hasIcon: true },
+                    { name: 'Login name', value: 'RANJITHRJ', hasIcon: true },
+                    { name: 'Role', value: 'ACCOUNTADMIN', hasIcon: true },
+                    { name: 'Account locator', value: 'KEB70244', hasIcon: true },
+                    { name: 'Cloud platform', value: 'AWS', hasIcon: true },
+                    { name: 'Edition', value: 'Enterprise', hasIcon: true }
+                  ].map((item, index) => (
+                    <div key={index} className="flex items-center justify-between py-3 border-b border-gray-700 last:border-b-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-300 font-medium">{item.name}</span>
+                        {item.hasIcon && (
+                          <div className="w-4 h-4 rounded-full bg-gray-600 flex items-center justify-center">
+                            <span className="text-xs text-gray-400">?</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-white font-mono">{item.value}</span>
+                        <button className="text-gray-400 hover:text-white transition-colors">
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-700 flex items-center justify-between">
+              <button className="text-blue-400 hover:text-blue-300 text-sm transition-colors">
+                Learn more
+              </button>
+              <button
+                onClick={() => setAccountDetailsOpen(false)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
