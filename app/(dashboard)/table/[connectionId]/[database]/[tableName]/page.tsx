@@ -54,7 +54,7 @@ export default function TableDataPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   const connection = mockConnections.find(conn => conn.id === connectionId);
@@ -81,7 +81,7 @@ export default function TableDataPage() {
 
   const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
   const startIndex = (currentPage - 1) * rowsPerPage;
-  const paginatedRows = filteredRows.slice(startIndex, startIndex + rowsPerPage);
+  const paginatedRows = rowsPerPage === -1 ? filteredRows : filteredRows.slice(startIndex, startIndex + rowsPerPage);
 
   const handleSelectRow = (rowId: string) => {
     const newSelected = new Set(selectedRows);
@@ -101,6 +101,11 @@ export default function TableDataPage() {
     }
   };
 
+  const handleRowsPerPageChange = (newRowsPerPage: number) => {
+    setRowsPerPage(newRowsPerPage);
+    setCurrentPage(1); // Reset to first page when changing rows per page
+  };
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-white dark:bg-gray-800">
@@ -113,9 +118,9 @@ export default function TableDataPage() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-800">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex-shrink-0 p-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <button
@@ -191,7 +196,7 @@ export default function TableDataPage() {
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden bg-white dark:bg-gray-800">
         <div className="h-full overflow-auto">
           <table className="w-full min-w-max">
             <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
@@ -289,14 +294,35 @@ export default function TableDataPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex-shrink-0 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex-shrink-0 px-6 py-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            Showing {startIndex + 1} to {Math.min(startIndex + rowsPerPage, filteredRows.length)} of{' '}
-            {filteredRows.length} results
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {rowsPerPage === -1 
+                ? `Showing all ${filteredRows.length} results`
+                : `Showing ${startIndex + 1} to ${Math.min(startIndex + rowsPerPage, filteredRows.length)} of ${filteredRows.length} results`
+              }
+            </div>
+            
+            {/* Rows per page selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Rows per page:</span>
+              <select
+                value={rowsPerPage}
+                onChange={(e) => handleRowsPerPageChange(Number(e.target.value))}
+                className="px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={10}>10</option>
+                <option value={15}>15</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={-1}>All ({filteredRows.length})</option>
+              </select>
+            </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          {rowsPerPage !== -1 && (
+            <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
@@ -306,8 +332,18 @@ export default function TableDataPage() {
             </button>
             
             <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const pageNum = i + 1;
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 7) {
+                  pageNum = i + 1;
+                } else {
+                  // Show pages around current page
+                  const start = Math.max(1, currentPage - 3);
+                  const end = Math.min(totalPages, start + 6);
+                  pageNum = start + i;
+                  if (pageNum > end) return null;
+                }
+                
                 return (
                   <button
                     key={pageNum}
@@ -332,6 +368,7 @@ export default function TableDataPage() {
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
+          )}
         </div>
       </div>
     </div>
