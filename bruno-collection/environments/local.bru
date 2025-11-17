@@ -1,0 +1,40 @@
+vars {
+  baseUrl: http://localhost:5000/api
+  apiVersion: v1
+  environment: local
+  timeout: 30000
+  retryAttempts: 3
+  logLevel: debug
+  actualuser.firstName: John
+  actualuser.lastName: Doe
+  actualuser.password: SecurePass123@
+  actualuser.confirmPassword: SecurePass123@
+  actualuser.companyName: Acme Corporation
+  actualuser.accountIdentifier: MAOPZLF-MSTZHCVD
+  actualuser.username: johndoe123
+  actualuser.email: john.doe@example.com
+  actualuser.refreshToken: 
+  actualuser.accessToken: 
+  actualuser.tokenExpiry: 
+  actualuser.refreshTokenExpiry: 
+  actualuser.userId: 
+  actualuser.isLoggedIn: false
+  actualuser.lastLoginTime: 
+  actualuser.isVerified: false
+  actualuser.lastVerificationTime: 
+  healthcheck.lastSuccess: 
+  healthcheck.serviceStatus: 
+  healthcheck.serviceVersion: 
+  healthcheck.environment: 
+  healthcheck.lastFailure: 
+  healthcheck.failureReason: 
+  healthcheck.lastResponseTime: 
+  profilePicturePath: C:/Users/ranji/OneDrive/Pictures/wp.png
+}
+
+vars:secret [
+  actualuser.accessToken,
+  actualuser.refreshToken,
+  supabaseAnonKey,
+  supabaseServiceRoleKey
+]

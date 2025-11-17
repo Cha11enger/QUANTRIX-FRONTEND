@@ -1,0 +1,29 @@
+meta {
+  name: Get Deprecated Versions
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/api/versions/deprecated
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+docs {
+  # Get Deprecated API Versions
+  
+  This endpoint returns information about deprecated API versions including:
+  - Deprecated version numbers
+  - Deprecation dates
+  - Migration recommendations
+  - End-of-life timelines
+  
+  ## Response
+  Returns a JSON array of deprecated API versions with deprecation details.
+}

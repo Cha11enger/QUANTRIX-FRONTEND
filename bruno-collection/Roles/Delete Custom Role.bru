@@ -1,0 +1,133 @@
+meta {
+  name: Delete Custom Role
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/{{apiVersion}}/roles/custom?by={{deleteRoleBy}}&value={{deleteRoleValue}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{actualuser.accessToken}}
+}
+
+script:pre-request {
+  // Validate token exists
+  if (!req.headers.Authorization || req.headers.Authorization === 'Bearer ') {
+    throw new Error('Access token is required. Please login first.');
+  }
+  
+  // Set default values if not provided
+  if (!bru.getEnvVar('deleteRoleBy')) {
+    bru.setEnvVar('deleteRoleBy', 'name');
+  }
+  
+  if (!bru.getEnvVar('deleteRoleValue')) {
+    throw new Error('deleteRoleValue is required. Please set the role identifier value to delete.');
+  }
+  
+  console.log('🗑️  Preparing to delete role:', bru.getEnvVar('deleteRoleValue'));
+  console.log('📋 Deletion parameters:', {
+    by: bru.getEnvVar('deleteRoleBy'),
+    value: bru.getEnvVar('deleteRoleValue')
+  });
+}
+
+script:post-response {
+  // Store response for debugging
+  bru.setEnvVar('lastDeleteRoleResponse', res.body);
+  bru.setEnvVar('lastDeleteRoleStatus', res.status);
+  
+  // Handle different response scenarios
+  if (res.status === 200) {
+    // Success - role deleted
+    const responseData = res.body;
+    if (responseData.success) {
+      bru.setEnvVar('lastDeletedRole.value', bru.getEnvVar('deleteRoleValue'));
+      bru.setEnvVar('lastDeletedRole.by', bru.getEnvVar('deleteRoleBy'));
+      bru.setEnvVar('lastRoleDeleteSuccess', 'true');
+      
+      console.log('✅ Role deleted successfully:', bru.getEnvVar('deleteRoleValue'));
+      console.log('📊 Response:', responseData.message || 'Role deleted successfully');
+    } else {
+      bru.setEnvVar('lastRoleDeleteSuccess', 'false');
+      console.error('❌ Deletion failed despite 200 status:', responseData);
+    }
+  } else if (res.status === 400) {
+    // Bad Request
+    bru.setEnvVar('lastRoleDeleteSuccess', 'false');
+    console.error('❌ Bad Request:', res.body.message || 'Invalid request parameters');
+    console.error('📋 Request Details:', {
+      by: bru.getEnvVar('deleteRoleBy'),
+      value: bru.getEnvVar('deleteRoleValue')
+    });
+  } else if (res.status === 401) {
+    // Unauthorized
+    bru.setEnvVar('lastRoleDeleteSuccess', 'false');
+    console.error('❌ Unauthorized: Invalid or expired token');
+    console.error('💡 Please login again to get a new access token');
+  } else if (res.status === 403) {
+    // Forbidden
+    bru.setEnvVar('lastRoleDeleteSuccess', 'false');
+    console.error('❌ Forbidden: Insufficient permissions to delete roles');
+    console.error('💡 Check if your account has the necessary permissions');
+  } else if (res.status === 404) {
+    // Not Found
+    bru.setEnvVar('lastRoleDeleteSuccess', 'false');
+    console.error('❌ Role not found:', bru.getEnvVar('deleteRoleValue'));
+    console.error('💡 Please check the role identifier and try again');
+  } else if (res.status === 409) {
+    // Conflict
+    bru.setEnvVar('lastRoleDeleteSuccess', 'false');
+    console.error('❌ Conflict:', res.body.message || 'Cannot delete role');
+    console.error('💡 This role might be in use or have dependencies');
+  } else if (res.status === 422) {
+    // Unprocessable Entity
+    bru.setEnvVar('lastRoleDeleteSuccess', 'false');
+    console.error('❌ Validation Error:', res.body.message || 'Invalid deletion request');
+  } else if (res.status === 429) {
+    // Too Many Requests
+    bru.setEnvVar('lastRoleDeleteSuccess', 'false');
+    console.error('❌ Rate limit exceeded. Please try again later');
+  } else if (res.status >= 500) {
+    // Server Error
+    bru.setEnvVar('lastRoleDeleteSuccess', 'false');
+    console.error('❌ Server Error:', res.status, res.statusText);
+    console.error('💡 Please try again later or contact support');
+  } else {
+    // Unexpected status
+    bru.setEnvVar('lastRoleDeleteSuccess', 'false');
+    console.error('❌ Unexpected response:', res.status, res.statusText);
+    console.error('📄 Response body:', res.body);
+  }
+}
+
+tests {
+  // Test successful deletion
+  test("Status code is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  
+  test("Response has success property", function() {
+    expect(res.body).to.have.property('success');
+  });
+  
+  test("Response has message property", function() {
+    expect(res.body).to.have.property('message');
+  });
+  
+  test("Success is true", function() {
+    expect(res.body.success).to.equal(true);
+  });
+  
+  test("Message indicates successful deletion", function() {
+    expect(res.body.message).to.include('successfully');
+  });
+  
+  test("Response time is reasonable", function() {
+    expect(res.responseTime).to.be.lessThan(2000);
+  });
+}

@@ -1,0 +1,81 @@
+meta {
+  name: QUANTRIX API Collection
+  type: collection
+  version: 1.0.0
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  User-Agent: Bruno/1.0.0
+}
+
+auth {
+  mode: bearer
+}
+
+script:pre-request {
+  // Global pre-request script
+  const timestamp = new Date().toISOString();
+  bru.setVar("timestamp", timestamp);
+  
+  // Set request ID if not already set
+  if (!bru.getVar("requestId")) {
+    bru.setVar("requestId", `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  }
+  
+  // Log request details
+  console.log(`[${timestamp}] Making request to: ${req.getUrl()}`);
+}
+
+script:post-response {
+  // Global post-response script
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Response status: ${res.getStatus()}`);
+  
+  // Store common response data
+  if (res.getStatus() === 200 && res.getBody()) {
+    const body = res.getBody();
+    
+    // Store tokens if present
+    if (body.data && body.data.accessToken) {
+      bru.setEnvVar("accessToken", body.data.accessToken);
+    }
+    
+    if (body.data && body.data.refreshToken) {
+      bru.setEnvVar("refreshToken", body.data.refreshToken);
+    }
+    
+    // Store user data if present
+    if (body.data && body.data.user) {
+      bru.setEnvVar("userId", body.data.user.id);
+      bru.setEnvVar("username", body.data.user.username);
+    }
+  }
+}
+
+docs {
+  # QUANTRIX API Collection
+  
+  This Bruno collection provides comprehensive API testing capabilities for the QUANTRIX backend system.
+  
+  ## Features
+  - Dynamic environment management (development, staging, production)
+  - Automated token management
+  - Request/response logging
+  - Type-safe request validation
+  - CI/CD integration support
+  
+  ## Usage
+  1. Select the appropriate environment (development/staging/production)
+  2. Run authentication requests to obtain tokens
+  3. Use the organized folder structure to test specific API endpoints
+  
+  ## Environment Variables
+  - `baseUrl`: API base URL
+  - `accessToken`: JWT access token (auto-managed)
+  - `refreshToken`: JWT refresh token (auto-managed)
+  - `userId`: Current user ID (auto-managed)
+  - `username`: Current username (auto-managed)
+  - `requestId`: Unique request identifier (auto-generated)
+}

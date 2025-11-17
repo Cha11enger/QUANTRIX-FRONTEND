@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { User, Shield, Bell, Palette, Users, UserCog, ShieldCheck } from 'lucide-react';
 
 interface SettingsLayoutProps {
   children: ReactNode;
@@ -9,13 +10,13 @@ interface SettingsLayoutProps {
 }
 
 const settingsTabs = [
-  { id: 'profile', name: 'Profile', icon: '👤' },
-  { id: 'security', name: 'Security', icon: '🔒' },
-  { id: 'notifications', name: 'Notifications', icon: '🔔' },
-  { id: 'appearance', name: 'Appearance', icon: '🎨' },
-  { id: 'roles', name: 'Roles Management', icon: '👥' },
-  { id: 'users', name: 'User Management', icon: '👤' },
-  { id: 'data-privacy', name: 'Data & Privacy', icon: '🛡️' },
+  { id: 'profile', name: 'Profile', icon: User },
+  { id: 'security', name: 'Security', icon: Shield },
+  { id: 'notifications', name: 'Notifications', icon: Bell },
+  { id: 'appearance', name: 'Appearance', icon: Palette },
+  { id: 'roles', name: 'Roles Management', icon: Users },
+  { id: 'users', name: 'User Management', icon: UserCog },
+  { id: 'data-privacy', name: 'Data & Privacy', icon: ShieldCheck },
 ];
 
 export function SettingsLayout({ children, activeTab, onTabChange }: SettingsLayoutProps) {
@@ -42,7 +43,7 @@ export function SettingsLayout({ children, activeTab, onTabChange }: SettingsLay
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
               >
-                <span className="text-lg">{tab.icon}</span>
+                <tab.icon className="w-5 h-5" />
                 <span className="font-medium">{tab.name}</span>
               </button>
             ))}

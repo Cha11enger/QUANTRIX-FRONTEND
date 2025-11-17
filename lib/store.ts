@@ -23,6 +23,7 @@ interface AppState {
   currentRole: string;
   schemaSidebarOpen: boolean;
   schemaSidebarWidth: number;
+  rolesRefreshTick: number;
   sqlEditorTabs: Array<{
     id: string;
     name: string;
@@ -34,6 +35,7 @@ interface AppState {
   chatMessages: ChatMessage[];
   setActiveConnection: (id: string | null) => void;
   setCurrentRole: (role: string) => void;
+  bumpRolesRefresh: () => void;
   setSchemaSidebarOpen: (open: boolean) => void;
   setSchemaSidebarWidth: (width: number) => void;
   addSqlTab: (tab: { id?: string; name: string; content?: string; connectionId?: string }) => void;
@@ -89,6 +91,11 @@ export const useAuthStore = create<AuthState>()(
       },
       logout: () => {
         debug.log('Logout');
+        // Clear stored accounts on logout for security
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('storedAccounts');
+          sessionStorage.removeItem('accountIdentifier');
+        }
         set({ user: null, isAuthenticated: false });
       },
       updateProfile: (data) => 
@@ -107,6 +114,7 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       activeConnection: null,
       currentRole: 'ACCOUNTADMIN',
+      rolesRefreshTick: 0,
       schemaSidebarOpen: true,
       schemaSidebarWidth: 300,
       sqlEditorTabs: [
@@ -130,6 +138,9 @@ export const useAppStore = create<AppState>()(
       setCurrentRole: (role) => {
         debug.log('Setting current role', { role });
         set({ currentRole: role });
+      },
+      bumpRolesRefresh: () => {
+        set({ rolesRefreshTick: Date.now() });
       },
       setSchemaSidebarOpen: (open) => {
         debug.log('Setting schema sidebar open', { open });

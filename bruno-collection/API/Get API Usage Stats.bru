@@ -1,0 +1,29 @@
+meta {
+  name: Get API Usage Stats
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/api/stats
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+docs {
+  # Get API Usage Statistics
+  
+  This endpoint returns detailed usage statistics including:
+  - Total API calls
+  - Usage by time period
+  - Most popular endpoints
+  - User activity patterns
+  
+  ## Response
+  Returns a JSON object with comprehensive usage statistics.
+}

@@ -1,0 +1,29 @@
+meta {
+  name: Get Sunset Versions
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/api/versions/sunset
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+docs {
+  # Get Sunset API Versions
+  
+  This endpoint returns information about API versions that are scheduled for sunset including:
+  - Sunset version numbers
+  - Sunset dates
+  - Final support dates
+  - Migration paths
+  
+  ## Response
+  Returns a JSON array of API versions scheduled for sunset with timeline details.
+}

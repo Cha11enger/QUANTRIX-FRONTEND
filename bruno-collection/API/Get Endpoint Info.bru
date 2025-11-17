@@ -1,0 +1,40 @@
+meta {
+  name: Get Endpoint Info
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/api/endpoint
+  body: none
+  auth: none
+}
+
+params:query {
+  version: v1
+  endpoint: /health
+  method: GET
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+docs {
+  # Get Endpoint Information
+  
+  This endpoint returns detailed information about a specific API endpoint including:
+  - Endpoint description
+  - Required parameters
+  - Response schema
+  - Authentication requirements
+  
+  ## Query Parameters
+  - `version` (required): API version (e.g., "v1")
+  - `endpoint` (required): Endpoint path (e.g., "/health")
+  - `method` (required): HTTP method (e.g., "GET", "POST")
+  
+  ## Response
+  Returns detailed information about the specified endpoint.
+}

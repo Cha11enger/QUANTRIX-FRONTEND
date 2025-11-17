@@ -1,0 +1,230 @@
+meta {
+  name: Get Current User Roles
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/roles/me/roles
+  body: none
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+  Authorization: Bearer {{actualuser.accessToken}}
+}
+
+auth:bearer {
+  token: {{actualuser.accessToken}}
+}
+
+script:pre-request {
+  // Pre-request script for Get Current User Roles API
+  // Validates that access token exists and is not expired
+  
+  console.log('=== Get Current User Roles Pre-Request Script ===');
+  
+  // Check if access token exists
+  const accessToken = bru.getEnvVar('actualuser.accessToken');
+  
+  if (!accessToken) {
+    console.error('❌ Access token not found. Please login first.');
+    throw new Error('Access token is required for this request');
+  }
+  
+  console.log('✅ Access token found');
+  
+  // Check token expiry with 5-minute buffer for clock skew
+  const tokenExpiry = bru.getEnvVar('actualuser.tokenExpiry');
+  if (tokenExpiry) {
+    const expiryTime = new Date(tokenExpiry);
+    const currentTime = new Date();
+    // Add 5-minute buffer to account for clock skew
+    const bufferTime = new Date(currentTime.getTime() + 5 * 60 * 1000);
+    
+    console.log('🔍 Token expiry check:');
+    console.log('   Token expiry:', expiryTime);
+    console.log('   Current time:', currentTime);
+    console.log('   Buffer time (+5min):', bufferTime);
+    console.log('   Time difference (ms):', expiryTime.getTime() - currentTime.getTime());
+    
+    if (bufferTime >= expiryTime) {
+      console.warn('⚠️ Warning: Access token appears to be expired or close to expiry.');
+      console.log('   Token expiry:', expiryTime);
+      console.log('   Current time (with buffer):', bufferTime);
+      
+      // Only clear token if it's actually expired (without buffer)
+      if (currentTime >= expiryTime) {
+        console.log('🧹 Clearing expired token...');
+        bru.setEnvVar('actualuser.accessToken', '', { persist: true });
+        bru.setEnvVar('actualuser.tokenExpiry', '', { persist: true });
+        bru.setEnvVar('actualuser.refreshToken', '', { persist: true });
+        bru.setEnvVar('actualuser.refreshTokenExpiry', '', { persist: true });
+        console.log('❌ Cleared expired token. Please login again.');
+        throw new Error('Access token has expired');
+      } else {
+        console.log('🟡 Token is close to expiry but still valid. Proceeding with request.');
+      }
+    } else {
+      console.log('✅ Access token is still valid.');
+      console.log('   Token expires at:', expiryTime);
+      console.log('   Current time:', currentTime);
+    }
+  } else {
+    console.log('ℹ️ No token expiry found in environment.');
+  }
+  
+  // Set request timestamp
+  bru.setVar('requestTimestamp', new Date().toISOString());
+  
+  console.log('🚀 Ready to fetch current user roles');
+}
+
+script:post-response {
+  // Post-response script for Get Current User Roles API
+  // Updates environment with latest user roles information and manages tokens
+  
+  console.log('=== Get Current User Roles Post-Response Script ===');
+  console.log('Response Status:', res.status);
+  
+  try {
+    if (res.status === 200) {
+      const responseBody = res.getBody();
+      console.log('Roles retrieved successfully');
+      
+      if (responseBody && responseBody.success && responseBody.data && responseBody.data.roles) {
+        const data = responseBody.data.roles;
+        console.log('Response data structure:', Object.keys(data));
+        
+        // Combine systemRoles and customRoles into a single roles array
+        const allRoles = [];
+        
+        if (data.systemRoles && Array.isArray(data.systemRoles)) {
+          console.log('Found systemRoles:', data.systemRoles.length);
+          allRoles.push(...data.systemRoles);
+        }
+        
+        if (data.customRoles && Array.isArray(data.customRoles)) {
+          console.log('Found customRoles:', data.customRoles.length);
+          allRoles.push(...data.customRoles);
+        }
+        
+        if (allRoles.length > 0) {
+          console.log('Combined roles:', allRoles.length);
+          
+          // Store roles as JSON string for complex data
+          bru.setEnvVar('actualuser.roles', JSON.stringify(allRoles), { persist: true });
+          
+          // Store individual role IDs for easy access
+          allRoles.forEach((role, index) => {
+            if (role.id && role.name) {
+              bru.setEnvVar(`roles.${role.name.toLowerCase().replace(/\s+/g, '')}.id`, String(role.id), { persist: true });
+            }
+          });
+          
+          // Store first role ID for use in other requests
+          bru.setEnvVar('firstRoleId', allRoles[0].id, { persist: true });
+          console.log('Stored first role ID:', allRoles[0].id);
+          
+          // Also store current role if available
+          if (data.currentRole) {
+            bru.setEnvVar('actualuser.currentRole', JSON.stringify(data.currentRole), { persist: true });
+            console.log('Stored current role:', data.currentRole.name);
+          }
+        } else {
+          console.warn('No roles found in response');
+        }
+        
+      } else {
+        console.warn('Warning: Unexpected response structure for successful current user roles request');
+        console.log('Response body:', JSON.stringify(responseBody, null, 2));
+        // Tokens kept; structure mismatch is not an auth failure.
+      }
+      
+    } else if (res.status === 401) {
+      console.error('❌ Authentication failed - Token invalid or expired');
+      
+      // Clear potentially invalid token information
+      bru.setEnvVar('actualuser.accessToken', '', { persist: true });
+      bru.setEnvVar('actualuser.tokenExpiry', '', { persist: true });
+      bru.setEnvVar('actualuser.refreshToken', '', { persist: true });
+      bru.setEnvVar('actualuser.refreshTokenExpiry', '', { persist: true });
+      
+      console.log('Cleared invalid token from environment. Please login again.');
+      
+    } else if (res.status === 403) {
+      console.error('❌ Access forbidden - Token valid but insufficient permissions');
+      
+    } else if (res.status === 404) {
+      console.error('❌ User not found - Roles may have been deleted');
+      
+    } else if (res.status === 429) {
+      console.error('❌ Rate limit exceeded - Too many roles requests');
+      
+    } else if (res.status >= 500) {
+      console.error('❌ Server error occurred while fetching roles');
+      
+    } else {
+      console.error('❌ Unexpected response status:', res.status);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing roles response:', error.message);
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+tests {
+  test("Response status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should have success status", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('success', true);
+  });
+  
+  test("Response should contain data object", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('data');
+    expect(body.data).to.be.an('object');
+  });
+  
+  test("Response should contain systemRoles or customRoles array", function() {
+    const body = res.getBody();
+    const hasSystemRoles = body.data && body.data.systemRoles && Array.isArray(body.data.systemRoles);
+    const hasCustomRoles = body.data && body.data.customRoles && Array.isArray(body.data.customRoles);
+    expect(hasSystemRoles || hasCustomRoles).to.be.true;
+  });
+  
+  test("Each role should have required properties", function() {
+    const body = res.getBody();
+    const allRoles = [];
+    
+    if (body.data.systemRoles && Array.isArray(body.data.systemRoles)) {
+      allRoles.push(...body.data.systemRoles);
+    }
+    if (body.data.customRoles && Array.isArray(body.data.customRoles)) {
+      allRoles.push(...body.data.customRoles);
+    }
+    
+    if (allRoles.length > 0) {
+      allRoles.forEach(role => {
+        expect(role).to.have.property('id');
+        expect(role).to.have.property('name');
+        expect(role).to.have.property('description');
+        // ID can be either string or number
+        expect(role.id).to.satisfy(id => typeof id === 'string' || typeof id === 'number');
+        expect(role.name).to.be.a('string');
+        expect(role.description).to.be.a('string');
+      });
+    }
+  });
+  
+  test("Response time should be reasonable", function() {
+    expect(res.getResponseTime()).to.be.below(5000);
+  });
+}

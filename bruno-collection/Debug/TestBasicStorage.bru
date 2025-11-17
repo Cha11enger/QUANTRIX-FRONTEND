@@ -1,0 +1,36 @@
+meta {
+  name: TestBasicStorage
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health/basic
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  console.log('=== Testing Basic Environment Variable Storage ===');
+  
+  // Test storing a simple string
+  bru.setEnvVar('test.simple', 'simple-value', { persist: true });
+  console.log('Stored test.simple');
+  
+  // Test storing a token-like string
+  bru.setEnvVar('test.token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c', { persist: true });
+  console.log('Stored test.token');
+  
+  // Test storing actualuser token
+  bru.setEnvVar('actualuser.testToken', 'test-token-value', { persist: true });
+  console.log('Stored actualuser.testToken');
+  
+  // Verify storage
+  const simple = bru.getEnvVar('test.simple');
+  const token = bru.getEnvVar('test.token');
+  const actualToken = bru.getEnvVar('actualuser.testToken');
+  
+  console.log('Retrieved test.simple:', simple || 'NOT FOUND');
+  console.log('Retrieved test.token:', token ? 'Found (' + token.substring(0, 20) + '...)' : 'NOT FOUND');
+  console.log('Retrieved actualuser.testToken:', actualToken || 'NOT FOUND');
+}

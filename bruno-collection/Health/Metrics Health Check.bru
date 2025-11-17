@@ -1,0 +1,215 @@
+meta {
+  name: Metrics Health Check
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health/metrics
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+script:pre-request {
+  // Pre-request script for Metrics Health Check API
+  // Includes comprehensive system metrics in health status
+  
+  console.log('=== Metrics Health Check Pre-Request Script ===');
+  
+  // Set metrics health check timestamp
+  const currentTime = new Date().toISOString();
+  bru.setEnvVar('healthcheck.metrics.lastAttempt', currentTime);
+  
+  // Log metrics health check initiation
+  console.log('Initiating metrics health check...');
+  console.log('Timestamp:', currentTime);
+  
+  console.log('Pre-request setup completed.');
+}
+
+script:post-response {
+  // Post-response script for Metrics Health Check API
+  // Logs health status with comprehensive system metrics
+  
+  console.log('=== Metrics Health Check Post-Response Script ===');
+  
+  const currentTime = new Date().toISOString();
+  
+  // Check response status and handle accordingly
+  if (res.status === 200) {
+    const responseBody = res.getBody();
+    console.log('✅ Metrics health check successful');
+    
+    if (responseBody && responseBody.success && responseBody.data) {
+      const data = responseBody.data;
+      
+      // Store metrics health information
+      bru.setEnvVar('healthcheck.metrics.lastSuccess', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.metrics.status', data.status || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.metrics.version', data.version || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.metrics.environment', data.environment || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.metrics.uptime', data.uptime?.toString() || '0', {persist: true});
+      
+      // Store memory metrics
+      if (data.memory) {
+        bru.setEnvVar('healthcheck.metrics.memory.heapUsed', data.memory.heapUsed?.toString() || '0', {persist: true});
+        bru.setEnvVar('healthcheck.metrics.memory.heapTotal', data.memory.heapTotal?.toString() || '0', {persist: true});
+        bru.setEnvVar('healthcheck.metrics.memory.external', data.memory.external?.toString() || '0', {persist: true});
+        bru.setEnvVar('healthcheck.metrics.memory.rss', data.memory.rss?.toString() || '0', {persist: true});
+      }
+      
+      // Store detailed metrics
+      if (data.metrics) {
+        // Memory usage metrics
+        if (data.metrics.memoryUsage) {
+          bru.setEnvVar('healthcheck.metrics.detailed.memory.rss', data.metrics.memoryUsage.rss?.toString() || '0', {persist: true});
+          bru.setEnvVar('healthcheck.metrics.detailed.memory.heapTotal', data.metrics.memoryUsage.heapTotal?.toString() || '0', {persist: true});
+          bru.setEnvVar('healthcheck.metrics.detailed.memory.heapUsed', data.metrics.memoryUsage.heapUsed?.toString() || '0', {persist: true});
+          bru.setEnvVar('healthcheck.metrics.detailed.memory.external', data.metrics.memoryUsage.external?.toString() || '0', {persist: true});
+          bru.setEnvVar('healthcheck.metrics.detailed.memory.arrayBuffers', data.metrics.memoryUsage.arrayBuffers?.toString() || '0', {persist: true});
+        }
+        
+        // CPU usage metrics
+        if (data.metrics.cpuUsage) {
+          bru.setEnvVar('healthcheck.metrics.detailed.cpu.user', data.metrics.cpuUsage.user?.toString() || '0', {persist: true});
+          bru.setEnvVar('healthcheck.metrics.detailed.cpu.system', data.metrics.cpuUsage.system?.toString() || '0', {persist: true});
+        }
+        
+        // Other metrics
+        bru.setEnvVar('healthcheck.metrics.detailed.uptime', data.metrics.uptime?.toString() || '0', {persist: true});
+        bru.setEnvVar('healthcheck.metrics.detailed.timestamp', data.metrics.timestamp || currentTime, {persist: true});
+      }
+      
+      // Clear any previous failure information
+      bru.setEnvVar('healthcheck.metrics.lastFailure', '', {persist: true});
+      bru.setEnvVar('healthcheck.metrics.failureReason', '', {persist: true});
+      
+      console.log('✅ Metrics health information updated:');
+      console.log('- Status:', data.status);
+      console.log('- Version:', data.version);
+      console.log('- Environment:', data.environment);
+      console.log('- Uptime:', data.uptime);
+      
+      if (data.metrics) {
+        console.log('- Memory RSS:', data.metrics.memoryUsage?.rss);
+        console.log('- Heap Used:', data.metrics.memoryUsage?.heapUsed);
+        console.log('- CPU User:', data.metrics.cpuUsage?.user);
+        console.log('- CPU System:', data.metrics.cpuUsage?.system);
+      }
+      
+      // Preserve authentication environment variables
+      const preserveAuthVars = [
+        'refreshToken', 'accessToken', 'username', 'email', 'accountIdentifier',
+        'password', 'confirmPassword', 'firstName', 'lastName', 'companyName',
+        'organizationName', 'tokenExpiry', 'refreshTokenExpiry', 'userId',
+        'isLoggedIn', 'lastLoginTime', 'isVerified', 'lastVerificationTime'
+      ];
+      
+      preserveAuthVars.forEach(varName => {
+        const value = bru.getEnvVar(varName);
+        if (value) {
+          bru.setEnvVar(varName, value, {persist: true});
+        }
+      });
+      
+    } else {
+      console.log('⚠️ Unexpected response format');
+      bru.setEnvVar('healthcheck.metrics.lastFailure', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.metrics.failureReason', 'Unexpected response format', {persist: true});
+    }
+    
+  } else {
+    console.log(`❌ Metrics health check failed with status: ${res.status}`);
+    bru.setEnvVar('healthcheck.metrics.lastFailure', currentTime, {persist: true});
+    bru.setEnvVar('healthcheck.metrics.failureReason', `HTTP ${res.status}`, {persist: true});
+    bru.setEnvVar('healthcheck.metrics.status', 'failed', {persist: true});
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+docs {
+  # Metrics Health Check API
+  
+  ## Overview
+  This endpoint provides health status along with comprehensive system performance metrics including memory usage, CPU utilization, and system statistics.
+  
+  ## Endpoint
+  `GET /api/v1/health/metrics`
+  
+  ## Response Format
+  
+  **200 OK** - Health status with detailed metrics
+  ```json
+  {
+    "success": true,
+    "data": {
+      "status": "OK|DEGRADED|UNHEALTHY",
+      "timestamp": "2025-11-01T07:49:34.016Z",
+      "uptime": 82.1621338,
+      "version": "0.0.0",
+      "environment": "development",
+      "memory": {
+        "heapUsed": 24584448,
+        "heapTotal": 26906624,
+        "external": 4602819,
+        "rss": 89415680
+      },
+      "metrics": {
+        "memoryUsage": {
+          "rss": 89415680,
+          "heapTotal": 26906624,
+          "heapUsed": 24585624,
+          "external": 4602819,
+          "arrayBuffers": 273454
+        },
+        "cpuUsage": {
+          "user": 1343000,
+          "system": 578000
+        },
+        "uptime": 82.1622239,
+        "timestamp": "2025-11-01T07:49:34.016Z"
+      }
+    },
+    "timestamp": "2025-11-01T07:49:34.016Z"
+  }
+  ```
+  
+  ## Metrics Included
+  
+  ### Memory Metrics
+  - `rss` - Resident Set Size (total memory allocated)
+  - `heapTotal` - Total heap memory allocated
+  - `heapUsed` - Heap memory currently in use
+  - `external` - Memory used by C++ objects bound to JavaScript
+  - `arrayBuffers` - Memory allocated for ArrayBuffers and SharedArrayBuffers
+  
+  ### CPU Metrics
+  - `user` - CPU time spent in user mode (microseconds)
+  - `system` - CPU time spent in system mode (microseconds)
+  
+  ### System Metrics
+  - `uptime` - Application uptime in seconds
+  - `timestamp` - Metrics collection timestamp
+  
+  ## Use Cases
+  - Performance monitoring and alerting
+  - Resource utilization tracking
+  - Capacity planning and scaling decisions
+  - System optimization and tuning
+  - Application performance profiling
+  - Infrastructure monitoring integration
+  
+  ## Environment Variables Set
+  - `healthcheck.metrics.lastSuccess` - Last successful check timestamp
+  - `healthcheck.metrics.status` - Current health status
+  - `healthcheck.metrics.memory.*` - Memory usage metrics
+  - `healthcheck.metrics.detailed.memory.*` - Detailed memory metrics
+  - `healthcheck.metrics.detailed.cpu.*` - CPU usage metrics
+  - `healthcheck.metrics.detailed.uptime` - Detailed uptime information
+}

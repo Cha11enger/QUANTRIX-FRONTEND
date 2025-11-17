@@ -1,0 +1,65 @@
+{
+  "name": "quantrix-bruno-collection",
+  "version": "1.0.0",
+  "description": "Bruno API collection for QUANTRIX backend with TypeScript automation",
+  "main": "index.js",
+  "scripts": {
+    "generate": "ts-node scripts/generate-collection.ts",
+    "update-env": "ts-node scripts/update-environments.ts update",
+    "validate-env": "ts-node scripts/update-environments.ts validate",
+    "create-env": "ts-node scripts/update-environments.ts create",
+    "test": "bruno run --env development",
+    "test:staging": "bruno run --env staging",
+    "test:production": "bruno run --env production",
+    "test:health": "npx @usebruno/cli run Health --env development",
+    "test:auth": "npx @usebruno/cli run Authentication --env development",
+    "test:api": "npx @usebruno/cli run API --env development",
+    "build": "tsc --noEmit",
+    "lint": "eslint scripts/**/*.ts",
+    "format": "prettier --write scripts/**/*.ts types/**/*.ts",
+    "clean": "rimraf dist",
+    "setup": "npm run generate && npm run update-env",
+    "ci": "npm run validate-env && npm run test"
+  },
+  "keywords": [
+    "bruno",
+    "api",
+    "testing",
+    "quantrix",
+    "typescript",
+    "automation"
+  ],
+  "author": "QUANTRIX Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "rimraf": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.0",
+    "form-data": "^4.0.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quantrix/quantrix-backend.git",
+    "directory": "bruno-collection"
+  },
+  "bruno": {
+    "version": "1.0.0",
+    "collection": ".",
+    "environments": [
+      "development",
+      "staging",
+      "production"
+    ]
+  }
+}

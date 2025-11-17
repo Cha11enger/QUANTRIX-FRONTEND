@@ -1,0 +1,61 @@
+script:post-response {
+  // Post-response script for Get Role Permissions API
+  // Updates environment with latest role permissions information
+  
+  console.log('=== Get Role Permissions Post-Response Script ===');
+  console.log('Response Status:', res.status);
+  
+  try {
+    if (res.status === 200) {
+      const responseBody = res.getBody();
+      console.log('Role permissions retrieved successfully'); 
+      
+      if (responseBody && responseBody.success && responseBody.data && responseBody.data.permissions) {
+        const permissions = responseBody.data.permissions;
+        
+        // Store roles as JSON string for complex data
+        if (permissions && Array.isArray(permissions)) {
+          bru.setEnvVar('actualuser.rolePermissions', JSON.stringify(permissions), {persist: true});
+
+          // Store the role ID that was requested
+          const requestedRoleId = bru.getVar('roleId') || bru.getEnvVar('roleId');
+          if (requestedRoleId) {
+            bru.setEnvVar('actualuser.lastRoleIdRequested', requestedRoleId, {persist: true});
+          }
+          
+          console.log('✅ Role permissions stored in environment:');
+          console.log('- Role ID:', requestedRoleId);
+          console.log('- Permissions Count:', permissions.length);
+        }
+        
+      } else {
+        console.warn('Warning: Unexpected response structure for successful permission check');         
+      }
+      
+    } else if (res.status === 401) {
+      console.error('❌ Authentication failed - Token invalid or expired');
+      
+      console.log('Cleared invalid token from environment. Please login again.');
+      
+    } else if (res.status === 403) {
+      console.error('❌ Access forbidden - Token valid but insufficient permissions');
+      
+    } else if (res.status === 404) {
+      console.error('❌ User not found - Permissions may have been deleted');
+      
+    } else if (res.status === 429) {
+      console.error('❌ Rate limit exceeded - Too many permissions requests');
+      
+    } else if (res.status >= 500) {
+      console.error('❌ Server error occurred while fetching permissions');
+      
+    } else {
+      console.error('❌ Unexpected response status:', res.status);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing permissions response:', error.message);
+  }
+  
+  console.log('Post-response processing completed.');
+}

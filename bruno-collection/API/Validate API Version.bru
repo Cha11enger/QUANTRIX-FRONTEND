@@ -1,0 +1,36 @@
+meta {
+  name: Validate API Version
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/api/version/validate
+  body: none
+  auth: none
+}
+
+params:query {
+  version: v1
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+docs {
+  # Validate API Version
+  
+  This endpoint validates if a specific API version is supported including:
+  - Version validity check
+  - Support status
+  - Deprecation warnings
+  - Migration recommendations
+  
+  ## Query Parameters
+  - `version` (required): API version to validate (e.g., "v1", "v2")
+  
+  ## Response
+  Returns validation result and version status information.
+}

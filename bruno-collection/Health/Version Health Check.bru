@@ -1,0 +1,158 @@
+meta {
+  name: Version Health Check
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health/version
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+script:pre-request {
+  // Pre-request script for Version Health Check API
+  // Includes API version information in health status
+  
+  console.log('=== Version Health Check Pre-Request Script ===');
+  
+  // Set version health check timestamp
+  const currentTime = new Date().toISOString();
+  bru.setEnvVar('healthcheck.version.lastAttempt', currentTime);
+  
+  // Log version health check initiation
+  console.log('Initiating version health check...');
+  console.log('Timestamp:', currentTime);
+  
+  console.log('Pre-request setup completed.');
+}
+
+script:post-response {
+  // Post-response script for Version Health Check API
+  // Logs health status with version information
+  
+  console.log('=== Version Health Check Post-Response Script ===');
+  
+  const currentTime = new Date().toISOString();
+  
+  // Check response status and handle accordingly
+  if (res.status === 200) {
+    const responseBody = res.getBody();
+    console.log('✅ Version health check successful');
+    
+    if (responseBody && responseBody.success && responseBody.data) {
+      const data = responseBody.data;
+      
+      // Store version health information
+      bru.setEnvVar('healthcheck.version.lastSuccess', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.version.status', data.status || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.version.appVersion', data.version || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.version.apiVersion', data.apiVersion || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.version.environment', data.environment || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.version.requestId', data.requestId || '', {persist: true});
+      bru.setEnvVar('healthcheck.version.uptime', data.uptime?.toString() || '0', {persist: true});
+      
+      // Store memory usage if available
+      if (data.memory) {
+        bru.setEnvVar('healthcheck.version.memory.heapUsed', data.memory.heapUsed?.toString() || '0', {persist: true});
+        bru.setEnvVar('healthcheck.version.memory.heapTotal', data.memory.heapTotal?.toString() || '0', {persist: true});
+        bru.setEnvVar('healthcheck.version.memory.rss', data.memory.rss?.toString() || '0', {persist: true});
+      }
+      
+      // Clear any previous failure information
+      bru.setEnvVar('healthcheck.version.lastFailure', '', {persist: true});
+      bru.setEnvVar('healthcheck.version.failureReason', '', {persist: true});
+      
+      console.log('✅ Version health information updated:');
+      console.log('- Status:', data.status);
+      console.log('- App Version:', data.version);
+      console.log('- API Version:', data.apiVersion);
+      console.log('- Environment:', data.environment);
+      console.log('- Request ID:', data.requestId);
+      console.log('- Uptime:', data.uptime);
+      
+      // Preserve authentication environment variables
+      const preserveAuthVars = [
+        'refreshToken', 'accessToken', 'username', 'email', 'accountIdentifier',
+        'password', 'confirmPassword', 'firstName', 'lastName', 'companyName',
+        'organizationName', 'tokenExpiry', 'refreshTokenExpiry', 'userId',
+        'isLoggedIn', 'lastLoginTime', 'isVerified', 'lastVerificationTime'
+      ];
+      
+      preserveAuthVars.forEach(varName => {
+        const value = bru.getEnvVar(varName);
+        if (value) {
+          bru.setEnvVar(varName, value, {persist: true});
+        }
+      });
+      
+    } else {
+      console.log('⚠️ Unexpected response format');
+      bru.setEnvVar('healthcheck.version.lastFailure', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.version.failureReason', 'Unexpected response format', {persist: true});
+    }
+    
+  } else {
+    console.log(`❌ Version health check failed with status: ${res.status}`);
+    bru.setEnvVar('healthcheck.version.lastFailure', currentTime, {persist: true});
+    bru.setEnvVar('healthcheck.version.failureReason', `HTTP ${res.status}`, {persist: true});
+    bru.setEnvVar('healthcheck.version.status', 'failed', {persist: true});
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+docs {
+  # Version Health Check API
+  
+  ## Overview
+  This endpoint provides health status along with detailed version information including API version and request tracking.
+  
+  ## Endpoint
+  `GET /api/v1/health/version`
+  
+  ## Response Format
+  
+  **200 OK** - Health status with version information
+  ```json
+  {
+    "success": true,
+    "data": {
+      "status": "OK|DEGRADED|UNHEALTHY",
+      "timestamp": "2025-11-01T07:49:10.930Z",
+      "uptime": 59.0765737,
+      "version": "0.0.0",
+      "environment": "development",
+      "memory": {
+        "heapUsed": 24671840,
+        "heapTotal": 27430912,
+        "external": 4565709,
+        "rss": 88915968
+      },
+      "apiVersion": "v1",
+      "requestId": "test-health-version"
+    },
+    "timestamp": "2025-11-01T07:49:10.930Z"
+  }
+  ```
+  
+  ## Use Cases
+  - Version compatibility checks
+  - API version validation
+  - Request tracking and debugging
+  - Deployment verification
+  - Client-server version alignment
+  
+  ## Environment Variables Set
+  - `healthcheck.version.lastSuccess` - Last successful check timestamp
+  - `healthcheck.version.status` - Current health status
+  - `healthcheck.version.appVersion` - Application version
+  - `healthcheck.version.apiVersion` - API version
+  - `healthcheck.version.requestId` - Request tracking ID
+  - `healthcheck.version.memory.*` - Memory usage metrics
+}

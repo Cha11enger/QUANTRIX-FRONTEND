@@ -1,0 +1,42 @@
+meta {
+  name: Switch Current Role
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/{{apiVersion}}/roles/current
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{actualuser.accessToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "roleId": "{{switchRoleId}}"
+  }
+}
+
+script:pre-request {
+  const token = bru.getEnvVar('actualuser.accessToken');
+  if (!token) { throw new Error('Access token is required. Please login first.'); }
+  let roleId = bru.getEnvVar('switchRoleId');
+  if (!roleId) { roleId = bru.getEnvVar('firstRoleId'); bru.setEnvVar('switchRoleId', roleId); }
+  console.log('🔄 SWITCH ROLE - roleId', roleId);
+}
+
+script:post-response {
+  const status = res.getStatus();
+  const body = res.getBody();
+  console.log('🔄 SWITCH ROLE - STATUS', status);
+  console.log('🔄 SWITCH ROLE - BODY', body);
+}
+
+tests {
+  test("Status 200", function() { expect(res.getStatus()).to.equal(200); });
+  test("Response has current_role_id", function() { expect(res.getBody().data).to.have.property('current_role_id'); });
+}

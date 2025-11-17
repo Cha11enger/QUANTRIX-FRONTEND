@@ -1,0 +1,36 @@
+meta {
+  name: Assign Permission To Role
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/permissions/assign
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+  Authorization: Bearer {{actualuser.accessToken}}
+}
+
+auth:bearer {
+  token: {{actualuser.accessToken}}
+}
+
+body:json {
+  {
+    "roleId": "{{assign.roleId}}",
+    "permissionId": "{{assign.permissionId}}",
+    "permissionCode": "{{assign.permissionCode}}"
+  }
+}
+
+tests {
+  test("Status 200/201", function() {
+    const s = res.getStatus();
+    expect([200,201]).to.include(s);
+  });
+}

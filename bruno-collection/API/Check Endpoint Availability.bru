@@ -1,0 +1,40 @@
+meta {
+  name: Check Endpoint Availability
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/api/endpoint/check
+  body: none
+  auth: none
+}
+
+params:query {
+  version: v1
+  endpoint: /health
+  method: GET
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+docs {
+  # Check Endpoint Availability
+  
+  This endpoint checks if a specific API endpoint is available and operational including:
+  - Endpoint status (active/inactive)
+  - Response time
+  - Last check timestamp
+  - Health status
+  
+  ## Query Parameters
+  - `version` (required): API version (e.g., "v1")
+  - `endpoint` (required): Endpoint path (e.g., "/health")
+  - `method` (required): HTTP method (e.g., "GET", "POST")
+  
+  ## Response
+  Returns availability status and health information for the specified endpoint.
+}

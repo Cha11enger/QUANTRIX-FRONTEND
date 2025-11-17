@@ -1,0 +1,132 @@
+vars {
+  baseUrl: http://localhost:5000/api
+  apiVersion: v1
+  environment: development
+  timeout: 30000
+  retryAttempts: 3
+  logLevel: debug
+  actualuser.firstName: John
+  actualuser.lastName: Doe
+  actualuser.fullName: John Doe
+  actualuser.bio: Senior Software Engineer with 8+ years of experience in full-stack development
+  actualuser.phone: +15550123
+  actualuser.location: San Francisco, CA
+  actualuser.website: https://johndoe.dev
+  actualuser.password: SecurePass123@
+  actualuser.newPassword: NewSecurePass123@
+  actualuser.confirmPassword: SecurePass123@
+  actualuser.companyName: testcom
+  actualuser.accountIdentifier: DXQRVQU-OMPHRCZ0
+  actualuser.username: testuser1
+  actualuser.email: testuser1@yopmail.com
+  actualuser.profilePictureUrl: https://kfvuywxfqupafhypiblm.supabase.co/storage/v1/object/public/profile-pictures/5a833ce8-1f27-4d1b-9d1b-7836d8aa6dff.png
+  actualuser.userId: 2290b202-a197-4bc5-8fe8-7c305825adaa
+  actualuser.isVerified: true
+  healthcheck.lastResponseTime: 23ms
+  roles.accountadmin.id: 11111111-1111-1111-1111-111111111111
+  roles.accountadmin.name: ACCOUNTADMIN
+  roles.dataengineer.id: 22222222-2222-2222-2222-222222222222
+  roles.dataengineer.name: DATAENGINEER
+  roles.dataanalyst.id: 33333333-3333-3333-3333-333333333333
+  roles.dataanalyst.name: DATAANALYST
+  roles.viewer.id: 44444444-4444-4444-4444-444444444444
+  roles.viewer.name: VIEWER
+  roleId: 11111111-1111-1111-1111-111111111111
+  permissionCategory: viewing
+  permissionCode: account.view.dashboard
+  system.permissionCategories: ["viewing", "data_management", "account_admin"]
+  actualuser.lastPermissionCheck: false
+  actualuser.lastPermissionCode: account.view.dashboard
+  actualuser.lastTokenRefresh: 
+  actualuser.rolePermissions: [{"id":"44444444-4444-4444-4444-444444444401","code":"account.view.dashboard","name":"View Account Dashboard","description":"Permission to view account dashboard and basic information","category":"viewing","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"44444444-4444-4444-4444-444444444402","code":"account.view.reports","name":"View Account Reports","description":"Permission to view reports and analytics within own account","category":"viewing","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"44444444-4444-4444-4444-444444444403","code":"account.view.data","name":"View Account Data","description":"Permission to view data sources and datasets within own account","category":"viewing","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"44444444-4444-4444-4444-444444444404","code":"account.view.users","name":"View Account Users","description":"Permission to view user list within own account","category":"viewing","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"33333333-3333-3333-3333-333333333301","code":"account.analysis.create","name":"Create Data Analysis","description":"Permission to create data analysis and reports within own account","category":"data_analysis","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"33333333-3333-3333-3333-333333333302","code":"account.analysis.edit","name":"Edit Data Analysis","description":"Permission to edit existing analysis within own account","category":"data_analysis","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"33333333-3333-3333-3333-333333333303","code":"account.analysis.share","name":"Share Analysis Reports","description":"Permission to share analysis reports within own account","category":"data_analysis","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"33333333-3333-3333-3333-333333333304","code":"account.analysis.export","name":"Export Analysis Data","description":"Permission to export analysis results within own account","category":"data_analysis","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"22222222-2222-2222-2222-222222222201","code":"account.data.create","name":"Create Data Sources","description":"Permission to create new data sources within own account","category":"data_engineering","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"22222222-2222-2222-2222-222222222202","code":"account.data.edit","name":"Edit Data Sources","description":"Permission to modify existing data sources within own account","category":"data_engineering","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"22222222-2222-2222-2222-222222222203","code":"account.data.delete","name":"Delete Data Sources","description":"Permission to delete data sources within own account","category":"data_engineering","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"22222222-2222-2222-2222-222222222204","code":"account.pipeline.manage","name":"Manage Data Pipelines","description":"Permission to create and manage ETL pipelines within own account","category":"data_engineering","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"22222222-2222-2222-2222-222222222205","code":"account.integration.manage","name":"Manage Integrations","description":"Permission to manage external integrations within own account","category":"data_engineering","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"11111111-1111-1111-1111-111111111101","code":"account.admin.settings","name":"Manage Account Settings","description":"Permission to modify account settings and configuration","category":"account_admin","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"11111111-1111-1111-1111-111111111102","code":"account.admin.users","name":"Manage Account Users","description":"Permission to manage users within own account only","category":"account_admin","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"11111111-1111-1111-1111-111111111103","code":"account.admin.roles","name":"Manage Account Roles","description":"Permission to assign/revoke roles within own account","category":"account_admin","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"11111111-1111-1111-1111-111111111104","code":"account.admin.billing","name":"Manage Account Billing","description":"Permission to manage billing and subscription within own account","category":"account_admin","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"11111111-1111-1111-1111-111111111105","code":"account.admin.audit","name":"View Account Audit Logs","description":"Permission to view audit logs and activities within own account","category":"account_admin","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"},{"id":"11111111-1111-1111-1111-111111111106","code":"account.admin.security","name":"Manage Account Security","description":"Permission to manage security settings within own account","category":"account_admin","scope":"own_account","created_at":"2025-11-03T20:28:50.51296+00:00","updated_at":"2025-11-03T21:34:09.219115+00:00"}]
+  actualuser.lastRoleIdRequested: 11111111-1111-1111-1111-111111111111
+  customRoleName: CUSTOMNEWTESTROLE1
+  customRoleDescription: A custom role created for testing purposes (no spaces allowed in name)
+  req.description: A custom role created for testing purposes (no spaces allowed in name)
+  auth.autoClearOn401: false
+  req.name: TESTROLE_{{$timestamp}}
+  lastCreatedCustomRole.id: 
+  lastCreatedCustomRole.name: 
+  lastCreatedCustomRole.description: 
+  updateRoleBy: name
+  updateRoleDescription: Updated description for testing
+  updateRoleIsActive: false
+  lastUpdatedRole.id: 43305ca0-1026-442e-baa8-0f7e1ee0d84b
+  lastUpdatedRole.name: testnewrolecd
+  lastUpdatedRole.description: Updated description for testing
+  lastUpdatedRole.isCustom: false
+  lastRoleUpdateSuccess: true
+  deleteRoleBy: name
+  deleteRoleValue: TESTROLE_20251115_150757645_UPDATED
+  lastDeletedRole.value: 
+  lastDeletedRole.by: 
+  lastRoleDeleteSuccess: false
+  firstRoleId: 11111111-1111-1111-1111-111111111111
+  actualuser.isLoggedIn: true
+  lastCustomRoleCreationError: Conflict - Role name already exists
+  actualuser.accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjIyOTBiMjAyLWExOTctNGJjNS04ZmU4LTdjMzA1ODI1YWRhYSIsImVtYWlsIjoidGVzdHVzZXIxQHlvcG1haWwuY29tIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc2MzMxNjUwNCwiZXhwIjoxNzYzMzE3NDA0LCJhdWQiOiJxdWFudHJpeC1hcGkiLCJpc3MiOiJxdWFudHJpeC1hdXRoIn0.Z-nN618y6HkRdb_iv3m2LNbwKHfvv9aPx3cfdYjYhJo
+  actualuser.tokenExpiry: 2025-11-16T18:23:24.000Z
+  actualuser.refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjIyOTBiMjAyLWExOTctNGJjNS04ZmU4LTdjMzA1ODI1YWRhYSIsImVtYWlsIjoidGVzdHVzZXIxQHlvcG1haWwuY29tIiwidHlwZSI6InJlZnJlc2giLCJpYXQiOjE3NjMzMTY1MDQsImV4cCI6MTc2MzkyMTMwNCwiYXVkIjoicXVhbnRyaXgtYXBpIiwiaXNzIjoicXVhbnRyaXgtYXV0aCJ9.z6qc-s24xyRRHpDOrGTcDnbaRoC5NKETql9uk27g0uE
+  actualuser.refreshTokenExpiry: 2025-11-23T18:08:27.175Z
+  actualuser.lastLoginTime: 2025-11-16T18:08:27.176Z
+  permissions.category: 
+  permissions.sortBy: name
+  permissions.order: asc
+  permissions.page: 1
+  permissions.pageSize: 50
+  qs: 
+  assign.roleId: 11111111-1111-1111-1111-111111111111
+  assign.permissionId: 44444444-4444-4444-4444-444444444401
+  assign.permissionCode: account.view.dashboard
+  bulk.roleIds: ["11111111-1111-1111-1111-111111111111","22222222-2222-2222-2222-222222222222"]
+  bulk.permissionIds: ["44444444-4444-4444-4444-444444444401","44444444-4444-4444-4444-444444444402"]
+  bulk.roleId: 11111111-1111-1111-1111-111111111111
+  bulk.permissionId: 44444444-4444-4444-4444-444444444401
+  assign.roleId: 11111111-1111-1111-1111-111111111111
+  assign.permissionId: 
+  assign.permissionCode: account.view.dashboard
+  bulk.roleIds: ["11111111-1111-1111-1111-111111111111","22222222-2222-2222-2222-222222222222"]
+  bulk.permissionIds: ["44444444-4444-4444-4444-444444444401","44444444-4444-4444-4444-444444444402"]
+  bulk.roleId: 
+  bulk.permissionId: 
+  user2.firstName: Jane
+  user2.lastName: Smith
+  user2.username: janesmith123
+  user2.email: janesmith123@example.com
+  user2.password: SecurePass123@
+  user2.companyName: Beta Corporation
+  user2.accountIdentifier: XGYUUMX-OJ053IKU
+  user2.userId: a6b25d7f-2401-428e-a3b5-6bbe363bf17e
+  user2.fullName: Jane Smith
+  user2.accountName: OJ053IKU
+  user2.dataSharingIdentifier: XGYUUMX.OJ053IKU
+  user2.accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImE2YjI1ZDdmLTI0MDEtNDI4ZS1hM2I1LTZiYmUzNjNiZjE3ZSIsImVtYWlsIjoiamFuZXNtaXRoMTIzQGV4YW1wbGUuY29tIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc2Mjk2MjA1MCwiZXhwIjoxNzYyOTYyOTUwLCJhdWQiOiJxdWFudHJpeC1hcGkiLCJpc3MiOiJxdWFudHJpeC1hdXRoIn0.odMa08bwM5RM6Smt9u5-RqQlzHYuzCgKpy5lbnzbniQ
+  user2.tokenExpiry: 2025-11-12T15:55:50.000Z
+  user2.refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImE2YjI1ZDdmLTI0MDEtNDI4ZS1hM2I1LTZiYmUzNjNiZjE3ZSIsImVtYWlsIjoiamFuZXNtaXRoMTIzQGV4YW1wbGUuY29tIiwidHlwZSI6InJlZnJlc2giLCJpYXQiOjE3NjI5NjIwNTAsImV4cCI6MTc2MzU2Njg1MCwiYXVkIjoicXVhbnRyaXgtYXBpIiwiaXNzIjoicXVhbnRyaXgtYXV0aCJ9.eT3wotCkj80us7OlM4WlFmGRGxn6OSrH6GTOwuFssws
+  user2.refreshTokenExpiry: 2025-11-19T15:40:52.617Z
+  user2.isLoggedIn: true
+  user2.lastLoginTime: 2025-11-12T15:40:52.618Z
+  lastCreatedCustomRole: {"id":"4c55eb3f-259b-40d9-8e8a-7cf75156a2ff","user_id":"5a833ce8-1f27-4d1b-9d1b-7836d8aa6dff","name":"TESTROLE_20251115_150757645","description":"A custom role created for testing purposes (no spaces allowed in name)","is_active":true,"created_at":"2025-11-15T09:37:57.276491+00:00","updated_at":"2025-11-15T09:37:57.276491+00:00","permissions":[]}
+  updateRoleValue: testnewrolecd
+  updateRoleName: testnewrolecd
+  lastCustomRoleCreationSuccess: true
+  lastCustomRoleCreationTime: 2025-11-15T09:37:58.869Z
+  lastCustomRoleCreationStatus: 201
+  lastCustomRoleCreationResponseTime: 1187
+  lastUpdateRoleResponse: {"success":true,"data":{"id":"43305ca0-1026-442e-baa8-0f7e1ee0d84b","user_id":"2290b202-a197-4bc5-8fe8-7c305825adaa","name":"testnewrolecd","description":"Updated description for testing","is_active":false,"created_at":"2025-11-16T13:34:39.98036+00:00","updated_at":"2025-11-16T16:22:27.827916+00:00","permissions":[]},"message":"Custom role updated successfully"}
+  lastUpdateRoleStatus: 200
+  lastPermissionsStatus: 200
+  lastPermissionsCount: 19
+  switchRoleId: 11111111-1111-1111-1111-111111111111
+  assign.roleId: 11111111-1111-1111-1111-111111111111
+  assign.permissionId: 44444444-4444-4444-4444-444444444401
+  assign.permissionCode: account.view.dashboard
+  bulk.roleIds: ["11111111-1111-1111-1111-111111111111","22222222-2222-2222-2222-222222222222"]
+  bulk.permissionIds: ["44444444-4444-4444-4444-444444444401","44444444-4444-4444-4444-444444444402"]
+  bulk.roleId: 11111111-1111-1111-1111-111111111111
+  bulk.permissionId: 44444444-4444-4444-4444-444444444401
+}
+vars:secret [
+  supabaseAnonKey,
+  supabaseServiceRoleKey
+]

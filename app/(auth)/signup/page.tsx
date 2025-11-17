@@ -4,27 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { signupSchema, SignupFormData } from '@/lib/validation/auth';
 import { Eye, EyeOff, Database, Loader as Loader2, Check } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
-import { AuthService, ApiError } from '@/lib/api';
+import { AuthService, ApiError, RegisterRequest } from '@/lib/api';
 import Link from 'next/link';
 
-const signupSchema = z.object({
-  username: z.string().min(2, 'Username must be at least 2 characters'),
-  companyName: z.string().min(2, 'Company name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain uppercase, lowercase, and number'),
-  confirmPassword: z.string(),
-  terms: z.boolean().refine(val => val === true, 'You must agree to the terms and conditions')
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-type SignupFormData = z.infer<typeof signupSchema>;
+// Validation schema moved to shared module
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -50,19 +36,24 @@ export default function SignupPage() {
     { test: /[a-z]/.test(password || ''), label: 'One lowercase letter' },
     { test: /[A-Z]/.test(password || ''), label: 'One uppercase letter' },
     { test: /\d/.test(password || ''), label: 'One number' },
+    { test: /[@$!%*?&]/.test(password || ''), label: 'One special character (@$!%*?&)' },
   ];
 
   const onSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
     try {
       // Register user with API
-      const registerResponse = await AuthService.register({
+      const payload: RegisterRequest = {
+        firstName: data.firstName,
+        lastName: data.lastName,
         username: data.username,
         email: data.email,
         password: data.password,
         confirmPassword: data.confirmPassword,
-        companyName: data.companyName
-      });
+        ...(data.companyName ? { companyName: data.companyName } : {}),
+      };
+
+      const registerResponse = await AuthService.register(payload);
 
       console.debug('Registration successful:', registerResponse);
 
@@ -91,7 +82,7 @@ export default function SignupPage() {
         setError('email', { message: 'Login after registration failed. Please try logging in manually.' });
       }
     } catch (error) {
-      console.error('Registration error:', error);
+      console.warn('Registration error:', error);
       
       if (error instanceof ApiError) {
         // Handle specific API errors
@@ -103,9 +94,13 @@ export default function SignupPage() {
               setError(field, { message: validationError.message });
             }
           });
+        } else if (error.status === 400 && Array.isArray(error.details?.errors)) {
+          setError('email', { message: error.details?.errors?.[0] || 'Validation error' });
         } else if (error.status === 409) {
           // Handle duplicate username/email
           setError('email', { message: 'Username or email already exists. Please try different credentials.' });
+        } else if (error.status === 429) {
+          setError('email', { message: 'Too many requests. Please try again later.' });
         } else {
           setError('email', { message: error.message || 'Registration failed. Please try again.' });
         }
@@ -134,6 +129,49 @@ export default function SignupPage() {
         {/* Form */}
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* First Name */}
+            <div>
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                First Name
+              </label>
+              <input
+                {...register('firstName')}
+                type="text"
+                autoComplete="given-name"
+                className={`
+                  w-full px-4 py-3 border rounded-lg bg-gray-50 dark:bg-gray-700 
+                  text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none 
+                  focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200
+                  ${errors.firstName ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}
+                `}
+                placeholder="Enter your first name"
+              />
+              {errors.firstName && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.firstName.message}</p>
+              )}
+            </div>
+
+            {/* Last Name */}
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Last Name
+              </label>
+              <input
+                {...register('lastName')}
+                type="text"
+                autoComplete="family-name"
+                className={`
+                  w-full px-4 py-3 border rounded-lg bg-gray-50 dark:bg-gray-700 
+                  text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none 
+                  focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200
+                  ${errors.lastName ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}
+                `}
+                placeholder="Enter your last name"
+              />
+              {errors.lastName && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.lastName.message}</p>
+              )}
+            </div>
             {/* Name */}
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -270,7 +308,7 @@ export default function SignupPage() {
                   focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200
                   ${errors.companyName ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}
                 `}
-                placeholder="Enter your company name"
+                placeholder="Enter your company name (optional)"
               />
               {errors.companyName && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.companyName.message}</p>

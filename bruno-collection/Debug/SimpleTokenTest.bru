@@ -1,0 +1,73 @@
+meta {
+  name: SimpleTokenTest
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "accountIdentifier": "{{actualuser.accountIdentifier}}",
+    "username": "{{actualuser.username}}",
+    "password": "{{actualuser.password}}"
+  }
+}
+
+script:pre-request {
+  // Clear any existing token variables
+  bru.setEnvVar('actualuser.accessToken', '', { persist: true });
+  bru.setEnvVar('actualuser.tokenExpiry', '', { persist: true });
+  bru.setEnvVar('actualuser.refreshToken', '', { persist: true });
+  bru.setEnvVar('actualuser.refreshTokenExpiry', '', { persist: true });
+  
+  console.log("=== Cleared existing tokens ===");
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const response = res.body;
+    console.log("=== Login Response ===");
+    console.log("Response body:", JSON.stringify(response, null, 2));
+    
+    if (response && response.data && response.data.accessToken) {
+      const accessToken = response.data.accessToken;
+      const refreshToken = response.data.refreshToken;
+      
+      console.log("Access token type:", typeof accessToken);
+      console.log("Access token length:", accessToken.length);
+      console.log("First 50 chars:", accessToken.substring(0, 50));
+      console.log("Last 50 chars:", accessToken.substring(accessToken.length - 50));
+      
+      // Store as simple strings
+      console.log("=== Storing tokens as strings ===");
+      bru.setEnvVar('actualuser.accessToken', String(accessToken), { persist: true });
+      bru.setEnvVar('actualuser.refreshToken', String(refreshToken), { persist: true });
+      
+      // Store expiry as string
+      const tokenExpiry = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      
+      bru.setEnvVar('actualuser.tokenExpiry', tokenExpiry, { persist: true });
+      bru.setEnvVar('actualuser.refreshTokenExpiry', refreshTokenExpiry, { persist: true });
+      
+      // Immediate verification
+      console.log("=== Immediate Verification ===");
+      console.log("actualuser.accessToken:", bru.getEnvVar('actualuser.accessToken') ? 'FOUND' : 'NOT FOUND');
+      console.log("actualuser.tokenExpiry:", bru.getEnvVar('actualuser.tokenExpiry') ? 'FOUND' : 'NOT FOUND');
+      console.log("actualuser.refreshToken:", bru.getEnvVar('actualuser.refreshToken') ? 'FOUND' : 'NOT FOUND');
+      console.log("actualuser.refreshTokenExpiry:", bru.getEnvVar('actualuser.refreshTokenExpiry') ? 'FOUND' : 'NOT FOUND');
+      
+      // Test with alternative variable name
+      bru.setEnvVar('simpleToken', String(accessToken), { persist: true });
+      console.log("simpleToken:", bru.getEnvVar('simpleToken') ? 'FOUND' : 'NOT FOUND');
+    }
+  } else {
+    console.log("Login failed:", res.status);
+    console.log("Response:", res.body);
+  }
+}

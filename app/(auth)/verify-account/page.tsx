@@ -180,14 +180,21 @@ export default function VerifyAccountPage() {
                         {loadingAccountId === account.accountIdentifier ? (
                           <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
                         ) : (
-                          <button
-                            type="button"
+                          <div
                             onClick={(e) => handleRemoveStoredAccount(account.accountIdentifier, e)}
-                            className="p-1 text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                            className="p-1 text-gray-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
                             title="Remove account"
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleRemoveStoredAccount(account.accountIdentifier, e);
+                              }
+                            }}
                           >
                             <X className="w-4 h-4" />
-                          </button>
+                          </div>
                         )}
                       </div>
                     </div>

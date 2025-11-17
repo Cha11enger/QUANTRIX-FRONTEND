@@ -1,0 +1,311 @@
+meta {
+  name: Basic Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+script:pre-request {
+  // Pre-request script for Health Check API
+  // Logs health check attempt and sets up monitoring variables
+  
+  console.log('=== Health Check Pre-Request Script ===');
+  
+  // Set health check timestamp
+  const currentTime = new Date().toISOString();
+  bru.setEnvVar('healthcheck.lastAttempt', currentTime);
+  
+  // Log health check initiation
+  console.log('Initiating authentication service health check...');
+  console.log('Timestamp:', currentTime);
+  
+  // Check if this is part of a monitoring sequence
+  const lastHealthCheck = bru.getEnvVar('healthcheck.lastSuccess');
+  if (lastHealthCheck) {
+    const lastTime = new Date(lastHealthCheck);
+    const timeDiff = new Date() - lastTime;
+    const minutesSinceLastCheck = Math.floor(timeDiff / (1000 * 60));
+    
+    console.log('Last successful health check:', lastHealthCheck);
+    console.log('Minutes since last check:', minutesSinceLastCheck);
+  }
+  
+  console.log('Pre-request setup completed.');
+}
+
+script:post-response {
+  // Post-response script for Health Check API
+  // Logs health status and stores service information
+  
+  console.log('=== Health Check Post-Response Script ===');
+  console.log('Response Status:', res.status);
+  
+  const currentTime = new Date().toISOString();
+  
+  try {
+    if (res.status === 200) {
+      const responseBody = res.getBody();
+      console.log('✅ Health check successful');
+      
+      if (responseBody && responseBody.success && responseBody.data) {
+        const data = responseBody.data;
+        
+        // Store service health information
+        bru.setEnvVar('healthcheck.lastSuccess', currentTime, {persist: true});
+        bru.setEnvVar('healthcheck.serviceStatus', data.status || 'unknown', {persist: true});
+        bru.setEnvVar('healthcheck.serviceVersion', data.version || 'unknown', {persist: true});
+        bru.setEnvVar('healthcheck.environment', data.environment || 'unknown', {persist: true});
+        
+        // Store uptime if available
+        if (data.uptime) {
+          bru.setEnvVar('healthcheck.serviceUptime', data.uptime, {persist: true});
+        }
+        
+        // Store database status
+        if (data.database) {
+          bru.setEnvVar('healthcheck.databaseStatus', data.database.status || 'unknown', {persist: true});
+          bru.setEnvVar('healthcheck.databaseResponseTime', data.database.responseTime || 'unknown', {persist: true});
+        }
+        
+        // Store cache status
+        if (data.cache) {
+          bru.setEnvVar('healthcheck.cacheStatus', data.cache.status || 'unknown', {persist: true});
+          bru.setEnvVar('healthcheck.cacheResponseTime', data.cache.responseTime || 'unknown', {persist: true});
+        }
+        
+        // Store available endpoints
+        if (data.endpoints) {
+          bru.setEnvVar('healthcheck.availableEndpoints', JSON.stringify(data.endpoints), {persist: true});
+        }
+        
+        // Clear any previous failure information
+        bru.setEnvVar('healthcheck.lastFailure', '', {persist: true});
+        bru.setEnvVar('healthcheck.failureReason', '', {persist: true});
+        
+        console.log('✅ Service health information updated:');
+        console.log('- Service Status:', data.status);
+        console.log('- Version:', data.version);
+        console.log('- Environment:', data.environment);
+        console.log('- Uptime:', data.uptime);
+        
+        if (data.database) {
+          console.log('- Database Status:', data.database.status);
+          console.log('- Database Response Time:', data.database.responseTime);
+        }
+        
+        if (data.cache) {
+          console.log('- Cache Status:', data.cache.status);
+          console.log('- Cache Response Time:', data.cache.responseTime);
+        }
+        
+        // Health status analysis
+        if (data.status === 'healthy') {
+          console.log('🟢 All systems operational');
+        } else if (data.status === 'degraded') {
+          console.log('🟡 Service degraded - some issues detected');
+        } else if (data.status === 'unhealthy') {
+          console.log('🔴 Service unhealthy - critical issues detected');
+        }
+        
+        // Preserve original authentication environment variables
+        const preserveAuthVars = [
+          'refreshToken',
+          'accessToken',
+          'tokenExpiry',
+          'refreshTokenExpiry',
+          'username',
+          'email',
+          'accountIdentifier',
+          'password',
+          'confirmPassword',
+          'firstName',
+          'lastName',
+          'companyName',
+          'organizationName',
+          'userId',
+          'isLoggedIn',
+          'lastLoginTime',
+          'isVerified',
+          'lastVerificationTime'
+        ];
+
+        preserveAuthVars.forEach(varName => {
+          const envKey = `actualuser.${varName}`;
+          const originalValue = bru.getEnvVar(envKey);
+          
+          if (originalValue) {
+            bru.setEnvVar(envKey, originalValue, { persist: true });
+            // Mask sensitive values in logs
+            const isSensitive = varName.includes('Token') || varName.includes('password') || varName === 'accessToken';
+            console.log(`💾 Preserved ${envKey}:`, isSensitive ? '***' : originalValue);
+          }
+        });
+        
+      } else {
+        console.warn('Warning: Unexpected response structure for health check');
+      }
+      
+    } else if (res.status === 503) {
+      console.error('🔴 Service unavailable - Authentication service is unhealthy');
+      
+      // Store failure information
+      bru.setEnvVar('healthcheck.lastFailure', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.failureReason', 'Service Unavailable (503)', {persist: true});
+      bru.setEnvVar('healthcheck.serviceStatus', 'unhealthy', {persist: true});
+      
+      // Try to extract issue details from response
+      try {
+        const responseBody = res.getBody();
+        if (responseBody && responseBody.data && responseBody.data.issues) {
+          const issues = responseBody.data.issues;
+          bru.setEnvVar('healthcheck.currentIssues', JSON.stringify(issues), {persist: true});
+          console.log('Service issues detected:', issues.join(', '));
+        }
+      } catch (parseError) {
+        console.log('Could not parse service issues from response');
+      }
+      
+    } else if (res.status >= 500) {
+      console.error('🔴 Server error during health check');
+      
+      // Store failure information
+      bru.setEnvVar('healthcheck.lastFailure', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.failureReason', `Server Error (${res.status})`, {persist: true});
+      bru.setEnvVar('healthcheck.serviceStatus', 'error', {persist: true});
+      
+    } else {
+      console.error('❌ Unexpected response status during health check:', res.status);
+      
+      // Store failure information
+      bru.setEnvVar('healthcheck.lastFailure', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.failureReason', `Unexpected Status (${res.status})`, {persist: true});
+    }
+    
+    // Calculate and store response time
+    const attemptTime = bru.getEnvVar('healthcheck.lastAttempt');
+    if (attemptTime) {
+      const responseTime = new Date() - new Date(attemptTime);
+      bru.setEnvVar('healthcheck.lastResponseTime', `${responseTime}ms`, {persist: true});
+      console.log('Health check response time:', `${responseTime}ms`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing health check response:', error.message);
+    
+    // Store error information
+    bru.setEnvVar('healthcheck.lastFailure', currentTime, {persist: true});
+    bru.setEnvVar('healthcheck.failureReason', `Script Error: ${error.message}`, {persist: true});
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+docs {
+  # Authentication Service Health Check
+  
+  This endpoint provides a health check for the authentication service. It returns the current status and basic information about the authentication system.
+  
+  ## Purpose
+  
+  - Monitor authentication service availability
+  - Check service health and status
+  - Verify authentication endpoints are operational
+  - Get basic service information
+  
+  ## No Authentication Required
+  
+  This is a public endpoint that does not require authentication. It can be used by:
+  - Monitoring systems
+  - Load balancers
+  - Health check services
+  - System administrators
+  
+  ## Success Response (200)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "service": "Authentication Service",
+      "status": "healthy",
+      "version": "1.0.0",
+      "timestamp": "2025-01-01T00:00:00.000Z",
+      "uptime": "2d 5h 30m 15s",
+      "environment": "development",
+      "endpoints": {
+        "register": "/api/v1/auth/register",
+        "verify": "/api/v1/auth/verify-account",
+        "login": "/api/v1/auth/login",
+        "refresh": "/api/v1/auth/refresh",
+        "logout": "/api/v1/auth/logout",
+        "profile": "/api/v1/auth/profile"
+      },
+      "database": {
+        "status": "connected",
+        "responseTime": "5ms"
+      },
+      "cache": {
+        "status": "connected",
+        "responseTime": "2ms"
+      }
+    },
+    "message": "Authentication service is healthy",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  ## Health Status Indicators
+  
+  - **healthy**: All systems operational
+  - **degraded**: Some non-critical issues detected
+  - **unhealthy**: Critical issues affecting service
+  
+  ## Response Information
+  
+  - **Service Info**: Name, version, environment
+  - **Status**: Current health status
+  - **Uptime**: How long the service has been running
+  - **Endpoints**: Available authentication endpoints
+  - **Dependencies**: Database and cache connection status
+  - **Performance**: Response times for critical components
+  
+  ## Error Responses
+  
+  **503 Service Unavailable** - Service unhealthy:
+  ```json
+  {
+    "success": false,
+    "data": {
+      "service": "Authentication Service",
+      "status": "unhealthy",
+      "issues": [
+        "Database connection failed",
+        "Cache unavailable"
+      ],
+      "timestamp": "2025-01-01T00:00:00.000Z"
+    },
+    "error": "Authentication service is currently unavailable",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **500 Internal Server Error** - Unexpected error
+  
+  ## Monitoring Usage
+  
+  This endpoint is ideal for:
+  - Automated health checks every 30-60 seconds
+  - Load balancer health probes
+  - Service discovery health verification
+  - Alerting systems integration
+  - Performance monitoring dashboards
+}

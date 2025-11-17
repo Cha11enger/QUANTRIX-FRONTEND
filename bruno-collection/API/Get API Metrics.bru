@@ -1,0 +1,29 @@
+meta {
+  name: Get API Metrics
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/api/metrics
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+docs {
+  # Get API Metrics
+  
+  This endpoint returns API performance metrics including:
+  - Request counts by endpoint
+  - Response times
+  - Error rates
+  - Throughput statistics
+  
+  ## Response
+  Returns a JSON object with comprehensive API metrics data.
+}

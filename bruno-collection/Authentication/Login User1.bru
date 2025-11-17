@@ -1,0 +1,73 @@
+meta {
+  name: Login User1
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+body:json {
+  {
+    "accountIdentifier": "{{actualuser.accountIdentifier}}",
+    "username": "{{actualuser.username}}",
+    "password": "{{actualuser.password}}"
+  }
+}
+
+script:pre-request {
+  const username = bru.getEnvVar('actualuser.username');
+  const password = bru.getEnvVar('actualuser.password');
+  if (!username || !password) {
+    throw new Error('Missing actualuser credentials in environment');
+  }
+}
+
+script:post-response {
+  const status = res.getStatus();
+  const body = res.getBody();
+  if (status === 200 && body && body.success) {
+    const token = body.data && (body.data.token || body.data.accessToken || body.data.access_token);
+    const refresh = body.data && (body.data.refreshToken || body.data.refresh_token);
+    const user = body.data && body.data.user;
+    if (token) {
+      bru.setEnvVar('actualuser.accessToken', token, { persist: true });
+      let expiryTime;
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+          if (payload.exp) expiryTime = new Date(payload.exp * 1000).toISOString();
+        }
+      } catch (_) {}
+      if (!expiryTime) expiryTime = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      bru.setEnvVar('actualuser.tokenExpiry', expiryTime, { persist: true });
+    }
+    if (refresh) {
+      bru.setEnvVar('actualuser.refreshToken', refresh, { persist: true });
+      const rtExp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      bru.setEnvVar('actualuser.refreshTokenExpiry', rtExp, { persist: true });
+    }
+    if (user) {
+      if (user.id) bru.setEnvVar('actualuser.userId', user.id, { persist: true });
+      if (user.email) bru.setEnvVar('actualuser.email', user.email, { persist: true });
+      if (user.username) bru.setEnvVar('actualuser.username', user.username, { persist: true });
+      if (user.fullName) bru.setEnvVar('actualuser.fullName', user.fullName, { persist: true });
+      if (user.accountIdentifier) bru.setEnvVar('actualuser.accountIdentifier', user.accountIdentifier, { persist: true });
+    }
+    bru.setEnvVar('actualuser.isLoggedIn', 'true', { persist: true });
+    bru.setEnvVar('actualuser.lastLoginTime', new Date().toISOString(), { persist: true });
+  }
+}
+
+tests {
+  test("Login returns 200", function() { expect(res.getStatus()).to.equal(200); });
+}

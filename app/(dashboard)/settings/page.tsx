@@ -6,6 +6,7 @@ import { SettingsLayout } from '@/components/settings/SettingsLayout';
 import { RolesManagement } from '@/components/settings/RolesManagement';
 import { UserManagement } from '@/components/settings/UserManagement';
 import { ProfileSettings } from '@/components/settings/ProfileSettings';
+import { SecuritySettings } from '@/components/settings/SecuritySettings';
 
 // Mock data
 const mockRoles = [
@@ -85,23 +86,21 @@ const mockUsers = [
   }
 ];
 
-const mockProfile = {
-  name: 'John Doe',
-  email: 'john.doe@company.com',
-  username: 'johndoe',
-  bio: 'Senior Database Administrator with 10+ years of experience in data management and analytics.',
-  avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face',
-  company: 'Tech Solutions Inc.',
-  location: 'San Francisco, CA',
-  website: 'https://johndoe.dev'
-};
-
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
   const [roles, setRoles] = useState(mockRoles);
   const [users, setUsers] = useState(mockUsers);
-  const [profile, setProfile] = useState(mockProfile);
+  const [profile, setProfile] = useState({
+    name: '',
+    email: '',
+    username: '',
+    bio: '',
+    avatar: '',
+    company: '',
+    location: '',
+    website: ''
+  });
 
   // Role management handlers
   const handleCreateRole = (roleData: any) => {
@@ -213,12 +212,7 @@ export default function SettingsPage() {
           />
         );
       case 'security':
-        return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Security Settings</h2>
-            <p className="text-gray-600 dark:text-gray-400">Security settings content coming soon...</p>
-          </div>
-        );
+        return <SecuritySettings />;
       case 'notifications':
         return (
           <div className="p-6">

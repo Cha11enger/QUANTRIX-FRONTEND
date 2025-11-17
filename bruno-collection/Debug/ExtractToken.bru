@@ -1,0 +1,72 @@
+meta {
+  name: ExtractToken
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/auth/login
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  console.log('🔐 Starting Login API request...');
+  
+  // Get login credentials from environment variables
+  const username = bru.getEnvVar('actualuser.username');
+  const password = bru.getEnvVar('actualuser.password');
+  const accountIdentifier = bru.getEnvVar('actualuser.accountIdentifier');
+  
+  console.log('✅ Found actualuser.username:', username);
+  console.log('✅ Found actualuser.password:', '***');
+  
+  // Set request body
+  req.setBody({
+    username: username,
+    password: password,
+    accountIdentifier: accountIdentifier
+  });
+}
+
+script:post-response {
+  console.log('📥 Processing Login API response...');
+  
+  try {
+    const responseData = res.getBody();
+    console.log('📊 Response status:', res.status);
+    
+    if (res.status === 200 && responseData.success) {
+      console.log('✅ Login successful!');
+      
+      // Extract access token
+      const accessToken = responseData.data.token;
+      console.log('🔑 Extracted accessToken:', accessToken ? 'Found' : 'NOT FOUND');
+      
+      if (accessToken) {
+        // Store the token in a way that can be accessed by other scripts
+        bru.setEnvVar('actualuser.accessToken', accessToken, { persist: true });
+        bru.setEnvVar('actualuser.tempToken', accessToken, { persist: true }); // Backup
+        
+        console.log('💾 Token stored successfully');
+        console.log('🎯 FULL_TOKEN_START');
+        console.log(accessToken);
+        console.log('🎯 FULL_TOKEN_END');
+        
+        // Save token to a file for easy access
+        const fs = require('fs');
+        fs.writeFileSync('/tmp/token.txt', accessToken);
+        console.log('💾 Token saved to /tmp/token.txt');
+        
+        // Also store in response body for easy extraction
+        res.setBody({
+          success: true,
+          token: accessToken,
+          message: 'Token extracted successfully'
+        });
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error processing response:', error.message);
+  }
+}

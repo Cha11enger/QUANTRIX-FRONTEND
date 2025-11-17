@@ -1,0 +1,37 @@
+meta {
+  name: Delete Profile Picture
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/{{apiVersion}}/users/me/profile-picture
+  auth: bearer
+}
+
+headers {
+  X-Request-ID: {{$guid}}
+}
+
+auth:bearer {
+  token: {{actualuser.accessToken}}
+}
+
+script:pre-request {
+  const url = req.getUrl();
+  const method = req.getMethod();
+  const headers = req.getHeaders();
+  console.log('🗑️ BRUNO PRE-REQUEST', { url, method });
+  console.log('🗑️ BRUNO HEADERS', headers);
+}
+
+script:post-response {
+  const status = res.getStatus();
+  const body = res.getBody();
+  console.log('🗑️ BRUNO RESPONSE STATUS', status);
+  console.log('🗑️ BRUNO RESPONSE BODY', body);
+}
+
+tests {
+  test("Status 200", function() { expect(res.getStatus()).to.equal(200); });
+}

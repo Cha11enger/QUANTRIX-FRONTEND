@@ -1,0 +1,42 @@
+meta {
+  name: Check Tokens
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  console.log('🔍 Checking token status...');
+  
+  // Check if tokens exist in different namespaces
+  const namespaces = ['AutoLogin', 'AutoProfile', 'actualuser'];
+  
+  namespaces.forEach(namespace => {
+    const accessToken = bru.getEnvVar(`${namespace}.accessToken`);
+    const refreshToken = bru.getEnvVar(`${namespace}.refreshToken`);
+    
+    console.log(`\n${namespace} namespace:`);
+    console.log(`  Access Token: ${accessToken ? 'EXISTS' : 'MISSING'}`);
+    console.log(`  Refresh Token: ${refreshToken ? 'EXISTS' : 'MISSING'}`);
+    
+    if (accessToken) {
+      console.log(`  Access Token (first 20 chars): ${accessToken.substring(0, 20)}...`);
+    }
+    if (refreshToken) {
+      console.log(`  Refresh Token (first 20 chars): ${refreshToken.substring(0, 20)}...`);
+    }
+  });
+  
+  // Check current environment
+  const currentEnv = bru.getEnvVar('environment');
+  console.log(`\n🌍 Current environment: ${currentEnv}`);
+  
+  // Try to get the actual token that should be used
+  const actualToken = bru.getEnvVar('actualuser.accessToken');
+  console.log(`\n🎯 Token to use: ${actualToken ? 'EXISTS' : 'MISSING'}`);
+}

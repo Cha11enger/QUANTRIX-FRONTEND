@@ -1,0 +1,29 @@
+meta {
+  name: Get API Info
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/api
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+docs {
+  # Get API Information
+  
+  This endpoint returns general information about the API including:
+  - API version
+  - Available endpoints
+  - Service status
+  - Basic configuration details
+  
+  ## Response
+  Returns a JSON object with API metadata and configuration information.
+}

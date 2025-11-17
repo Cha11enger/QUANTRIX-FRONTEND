@@ -1,0 +1,42 @@
+meta {
+  name: PrefixTest
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health/basic
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  console.log("=== Testing Different Prefixes ===");
+  
+  // Test different prefixes
+  const testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+  
+  console.log("Testing 'user.' prefix...");
+  bru.setEnvVar('user.accessToken', testToken, { persist: true });
+  
+  console.log("Testing 'auth.' prefix...");
+  bru.setEnvVar('auth.accessToken', testToken, { persist: true });
+  
+  console.log("Testing 'token.' prefix...");
+  bru.setEnvVar('token.accessToken', testToken, { persist: true });
+  
+  console.log("Testing 'actual' prefix...");
+  bru.setEnvVar('actual.accessToken', testToken, { persist: true });
+  
+  console.log("Testing 'actualuser' without dot...");
+  bru.setEnvVar('actualuser_accessToken', testToken, { persist: true });
+}
+
+script:post-response {
+  console.log("=== Retrieving Different Prefixes ===");
+  console.log("user.accessToken:", bru.getEnvVar('user.accessToken') ? 'FOUND' : 'NOT FOUND');
+  console.log("auth.accessToken:", bru.getEnvVar('auth.accessToken') ? 'FOUND' : 'NOT FOUND');
+  console.log("token.accessToken:", bru.getEnvVar('token.accessToken') ? 'FOUND' : 'NOT FOUND');
+  console.log("actual.accessToken:", bru.getEnvVar('actual.accessToken') ? 'FOUND' : 'NOT FOUND');
+  console.log("actualuser_accessToken:", bru.getEnvVar('actualuser_accessToken') ? 'FOUND' : 'NOT FOUND');
+}

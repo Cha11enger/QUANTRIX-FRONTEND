@@ -1,4 +1,9 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+
+// Extend AxiosRequestConfig to include retry flag
+interface ExtendedAxiosRequestConfig extends AxiosRequestConfig {
+  _retry?: boolean;
+}
 
 // API Response Types
 export interface ApiResponse<T = any> {
@@ -12,23 +17,29 @@ export interface ApiResponse<T = any> {
       field: string;
       message: string;
     }>;
+    errors?: string[];
   };
 }
 
 // Authentication Types
 export interface RegisterRequest {
+  firstName: string;
+  lastName: string;
   username: string;
   email: string;
   password: string;
   confirmPassword: string;
-  companyName: string;
+  companyName?: string;
 }
 
 export interface RegisterResponse {
   userId: string;
   username: string;
   email: string;
+  fullName: string;
   accountIdentifier: string;
+  dataSharingIdentifier: string;
+  organizationName: string;
   accountName: string;
   companyName: string;
 }
@@ -63,6 +74,38 @@ export interface LoginResponse {
     companyName: string;
   };
   expiresIn: number;
+}
+
+// Profile Types
+export interface ProfileResponse {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  username: string;
+  email: string;
+  accountIdentifier: string;
+  dataSharingIdentifier?: string;
+  organizationName: string;
+  accountName: string;
+  companyName: string;
+  fullName: string;
+  profilePictureUrl: string | null;
+  role: string;
+  roles: string[];
+  isActive: boolean;
+  isVerified?: boolean;
+}
+
+// Password Change Types
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  message: string;
+  updatedFields: string[];
+  sessionsInvalidated?: boolean;
 }
 
 // Stored Account Types
@@ -104,19 +147,52 @@ class ApiClient {
       (config) => {
         const token = this.getStoredToken();
         if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+          // Ensure headers object exists and set Authorization robustly
+          config.headers = config.headers ?? {};
+          (config.headers as any).Authorization = `Bearer ${token}`;
         }
         return config;
       },
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor for error handling
+    // Response interceptor for error handling and token refresh
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError<ApiResponse>) => {
+      async (error: AxiosError<ApiResponse>) => {
+        const originalRequest = error.config as ExtendedAxiosRequestConfig;
+        
         if (error.response) {
           const { status, data } = error.response;
+          
+          // Handle 401 errors with automatic token refresh
+          if (status === 401 && originalRequest && !originalRequest._retry) {
+            originalRequest._retry = true;
+            
+            try {
+              const newToken = await this.refreshTokenInternal();
+              
+              // Update the original request with new token (headers may be undefined)
+              originalRequest.headers = {
+                ...(originalRequest.headers as any),
+                Authorization: `Bearer ${newToken}`,
+              } as any;
+              
+              // Retry the original request
+              return this.client(originalRequest);
+            } catch (refreshError) {
+              // Clear tokens and redirect to login
+              this.clearStoredTokens();
+              
+              // If we're in a browser environment, redirect to login
+              if (typeof window !== 'undefined') {
+                window.location.href = '/verify-account';
+              }
+              
+              throw new ApiError(401, 'Session expired. Please login again.');
+            }
+          }
+          
           throw new ApiError(
             status,
             data?.error || 'An error occurred',
@@ -192,7 +268,15 @@ class ApiClient {
 
   async logout(): Promise<void> {
     try {
-      await this.client.post('/api/v1/auth/logout');
+      const refreshToken = typeof window !== 'undefined' 
+        ? localStorage.getItem('refreshToken') 
+        : null;
+      
+      if (refreshToken) {
+        await this.client.post('/api/v1/auth/logout', {
+          refreshToken
+        });
+      }
     } catch (error) {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error);
@@ -201,16 +285,31 @@ class ApiClient {
     }
   }
 
-  async refreshToken(): Promise<string> {
+  // Internal refresh method that doesn't use interceptors to avoid infinite loops
+  private async refreshTokenInternal(): Promise<string> {
     const refreshToken = typeof window !== 'undefined' 
       ? localStorage.getItem('refreshToken') 
       : null;
     
     if (!refreshToken) {
+      // Clear tokens and redirect to login silently
+      this.clearStoredTokens();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/verify-account';
+      }
       throw new ApiError(401, 'No refresh token available');
     }
 
-    const response = await this.client.post<ApiResponse<{ token: string; expiresIn: number }>>(
+    // Create a new axios instance without interceptors for refresh
+    const refreshClient = axios.create({
+      baseURL: this.client.defaults.baseURL,
+      timeout: this.client.defaults.timeout,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const response = await refreshClient.post<ApiResponse<{ token: string; refreshToken?: string; expiresIn: number }>>(
       '/api/v1/auth/refresh',
       { refreshToken }
     );
@@ -222,7 +321,16 @@ class ApiClient {
     const newToken = response.data.data.token;
     this.setStoredToken(newToken);
     
+    // Update refresh token if provided
+    if (response.data.data.refreshToken) {
+      this.setStoredRefreshToken(response.data.data.refreshToken);
+    }
+    
     return newToken;
+  }
+
+  async refreshToken(): Promise<string> {
+    return this.refreshTokenInternal();
   }
 
   async verifyAccount(data: VerifyAccountRequest): Promise<VerifyAccountResponse> {
@@ -238,14 +346,203 @@ class ApiClient {
     return response.data.data;
   }
 
-  async getProfile(): Promise<any> {
-    const response = await this.client.get<ApiResponse>('/api/v1/auth/profile');
-    
+  async getProfile(): Promise<ProfileResponse> {
+    const token = this.getStoredToken();
+    if (!token) {
+      throw new ApiError(401, 'No access token available. Please login first.');
+    }
+
+    const response = await this.client.get<ApiResponse<any>>('/api/v1/users/me/profile');
+
     if (!response.data.success) {
-      throw new ApiError(400, response.data.error || 'Failed to get profile');
+      throw new ApiError(400, response.data.error || 'Failed to get profile', response.data.details);
+    }
+
+    const payload = response.data.data;
+    const user = payload?.user ?? payload;
+
+    if (!user) {
+      throw new ApiError(400, 'Failed to get profile');
+    }
+
+    const normalized: ProfileResponse = {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      email: user.email,
+      accountIdentifier: user.accountIdentifier,
+      dataSharingIdentifier: user.dataSharingIdentifier,
+      organizationName: user.organizationName,
+      accountName: user.accountName,
+      companyName: user.companyName,
+      fullName: user.fullName,
+      profilePictureUrl: user.profilePictureUrl ?? null,
+      role: user.currentRole || user.role,
+      roles: user.roles || [],
+      isActive: user.isVerified ?? true,
+      isVerified: user.isVerified,
+    };
+
+    return normalized;
+  }
+
+  async updateProfile(data: UpdateProfileRequest): Promise<UpdateProfileResult> {
+    const response = await this.client.patch<ApiResponse<UpdateProfileResult>>(
+      '/api/v1/users/me/profile',
+      data
+    );
+    
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to update profile', response.data.details);
     }
     
     return response.data.data;
+  }
+
+  async uploadProfilePicture(file: File): Promise<UploadProfilePictureResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await this.client.post<ApiResponse<UploadProfilePictureResponse>>(
+      '/api/v1/users/me/profile-picture',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to upload profile picture', response.data.details);
+    }
+    
+    return response.data.data;
+  }
+
+  async removeProfilePicture(): Promise<{ message?: string }> {
+    const response = await this.client.delete<ApiResponse<{ message?: string }>>(
+      '/api/v1/users/me/profile-picture'
+    );
+    
+    if (!response.data.success) {
+      throw new ApiError(400, response.data.error || 'Failed to remove profile picture', response.data.details);
+    }
+    
+    return response.data.data || { message: 'Profile picture deleted' };
+  }
+
+  async getUserRoles(): Promise<GetUserRolesResponse> {
+    const response = await this.client.get<ApiResponse<any>>('/api/v1/roles/me/roles');
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to fetch user roles', response.data.details);
+    }
+    const payload = response.data.data;
+    const rolesObj = payload?.roles ?? payload;
+    if (!rolesObj || (!rolesObj.systemRoles && !rolesObj.customRoles)) {
+      throw new ApiError(400, 'Failed to fetch user roles');
+    }
+    return rolesObj as GetUserRolesResponse;
+  }
+
+  async changePassword(data: ChangePasswordRequest): Promise<ChangePasswordResponse> {
+    const response = await this.client.put<ApiResponse<ChangePasswordResponse>>(
+      '/api/v1/users/me/password',
+      data
+    );
+    
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to change password', response.data.details);
+    }
+    
+    return response.data.data;
+  }
+
+  async createCustomRole(data: CreateCustomRoleRequest): Promise<CreateCustomRoleResponse> {
+    const response = await this.client.post<ApiResponse<CreateCustomRoleResponse>>(
+      '/api/v1/roles/custom',
+      data
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to create custom role', response.data.details);
+    }
+    return response.data.data;
+  }
+
+  async getRoleById(roleId: string): Promise<RoleDetail> {
+    const response = await this.client.get<ApiResponse<any>>(`/api/v1/roles/${roleId}`);
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to fetch role', response.data.details);
+    }
+    const payload = response.data.data;
+    const role = payload?.role ?? (Array.isArray(payload) ? payload[0] : payload);
+    if (!role || !role.id || !role.name) {
+      throw new ApiError(400, 'Invalid role data');
+    }
+    const permsRaw = role.permissions || [];
+    const permissions: string[] = Array.isArray(permsRaw)
+      ? permsRaw.map((p: any) => typeof p === 'string' ? p : (p?.name || p?.code || '')).filter(Boolean)
+      : [];
+    return {
+      id: role.id,
+      name: role.name,
+      description: role.description || '',
+      permissions,
+    };
+  }
+
+  async getRolePermissions(roleId: string): Promise<RolePermission[]> {
+    const response = await this.client.get<ApiResponse<any>>(`/api/v1/permissions/roles/${roleId}`);
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to fetch role permissions', response.data.details);
+    }
+    const payload = response.data.data;
+    const list = Array.isArray(payload) ? payload : payload.permissions;
+    if (!Array.isArray(list)) {
+      throw new ApiError(400, 'Invalid permissions data');
+    }
+    return list.map((p: any) => ({
+      id: String(p.id ?? ''),
+      code: String(p.code ?? p.name ?? ''),
+      name: String(p.name ?? p.code ?? ''),
+      description: String(p.description ?? ''),
+      category: String(p.category ?? ''),
+    }));
+  }
+
+  async updateCustomRole(by: string, value: string, payload: { name: string; description: string; is_active: boolean }): Promise<CreateCustomRoleResponse> {
+    const response = await this.client.put<ApiResponse<CreateCustomRoleResponse>>(
+      '/api/v1/roles/custom',
+      payload,
+      { params: { by, value } }
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to update custom role', response.data.details);
+    }
+    return response.data.data;
+  }
+
+  async switchCurrentRole(roleId: string): Promise<{ current_role_id: string }> {
+    const response = await this.client.put<ApiResponse<{ current_role_id: string }>>(
+      '/api/v1/roles/current',
+      { roleId }
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to switch role', response.data.details);
+    }
+    return response.data.data;
+  }
+
+  async deleteCustomRole(by: string, value: string): Promise<{ message?: string }> {
+    const response = await this.client.delete<ApiResponse<{ message?: string }>>(
+      '/api/v1/roles/custom',
+      { params: { by, value } }
+    );
+    if (!response.data.success) {
+      throw new ApiError(400, response.data.error || 'Failed to delete custom role', response.data.details);
+    }
+    return response.data.data || { message: 'Role deleted' };
   }
 }
 
@@ -274,8 +571,52 @@ export class AuthService {
     return apiClient.refreshToken();
   }
 
-  static async getProfile(): Promise<any> {
+  static async getProfile(): Promise<ProfileResponse> {
     return apiClient.getProfile();
+  }
+
+  static async updateProfile(data: UpdateProfileRequest): Promise<UpdateProfileResult> {
+    return apiClient.updateProfile(data);
+  }
+
+  static async uploadProfilePicture(file: File): Promise<UploadProfilePictureResponse> {
+    return apiClient.uploadProfilePicture(file);
+  }
+
+  static async removeProfilePicture(): Promise<{ message?: string }> {
+    return apiClient.removeProfilePicture();
+  }
+
+  static async changePassword(currentPassword: string, newPassword: string): Promise<ChangePasswordResponse> {
+    return apiClient.changePassword({ currentPassword, newPassword });
+  }
+
+  static async getUserRoles(): Promise<GetUserRolesResponse> {
+    return apiClient.getUserRoles();
+  }
+
+  static async createCustomRole(data: CreateCustomRoleRequest): Promise<CreateCustomRoleResponse> {
+    return apiClient.createCustomRole(data);
+  }
+
+  static async getRoleById(roleId: string): Promise<RoleDetail> {
+    return apiClient.getRoleById(roleId);
+  }
+
+  static async getRolePermissions(roleId: string): Promise<RolePermission[]> {
+    return apiClient.getRolePermissions(roleId);
+  }
+
+  static async switchCurrentRole(roleId: string): Promise<{ current_role_id: string }> {
+    return apiClient.switchCurrentRole(roleId);
+  }
+
+  static async deleteCustomRole(by: string, value: string): Promise<{ message?: string }> {
+    return apiClient.deleteCustomRole(by, value);
+  }
+
+  static async updateCustomRole(by: string, value: string, payload: { name: string; description: string; is_active: boolean }): Promise<CreateCustomRoleResponse> {
+    return apiClient.updateCustomRole(by, value, payload);
   }
 
   // Session storage utilities for account identifier
@@ -367,4 +708,90 @@ export class AuthService {
       sessionStorage.removeItem('accountIdentifier');
     }
   }
+}
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  email?: string;
+  companyName?: string;
+  bio?: string;
+  phone?: string;
+  location?: string;
+  website?: string;
+}
+
+export interface UpdateProfileResult {
+  message: string;
+  updatedFields: string[];
+}
+export interface UploadProfilePictureResponse {
+  url: string;
+  message?: string;
+}
+
+export interface SystemRole {
+  id: string;
+  name: string;
+  description: string;
+  default_system_role: boolean;
+  created_at: string;
+  user_role_is_active: boolean;
+}
+
+export interface CustomRole {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CurrentRole {
+  id: string;
+  name: string;
+  description: string;
+  default_system_role: boolean;
+  created_at: string;
+  user_role_is_active: boolean;
+}
+
+export interface GetUserRolesResponse {
+  systemRoles: SystemRole[];
+  customRoles: CustomRole[];
+  currentRole: CurrentRole;
+}
+
+export interface RoleDetail {
+  id: string | number;
+  name: string;
+  description: string;
+  permissions: string[];
+}
+
+export interface CreateCustomRoleRequest {
+  name: string;
+  description: string;
+  permissionIds: number[];
+}
+
+export interface CreateCustomRoleResponse {
+  id: number | string;
+  user_id: string;
+  name: string;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  permissions: any[];
+}
+
+export interface RolePermission {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  category: string;
 }

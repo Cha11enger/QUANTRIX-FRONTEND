@@ -1,0 +1,132 @@
+meta {
+  name: Auto Tracked Profile
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/users/me/profile
+  body: none
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+  Authorization: Bearer {{actualuser.accessToken}}
+}
+
+script:pre-request {
+  // Auto-track this request
+  const { trackRequest, validateTokens } = require('./scripts/request-response-manager.js');
+  
+  console.log('🚀 Auto-tracking profile request...');
+  
+  // Validate tokens before making the request
+  const { getAllEnvVars } = require('./scripts/env-persister.js');
+  
+  console.log('🔍 Validating tokens before profile request...');
+  
+  // Check tokens in both AutoLogin namespace and actualuser namespace
+  const autoLoginValidation = validateTokens('AutoLogin');
+  const actualUserValidation = validateTokens('actualuser');
+  
+  // Also check the persisted environment variables
+  const currentEnv = bru.getEnvName();
+  const envVars = getAllEnvVars(currentEnv);
+  const hasPersistedTokens = !!(envVars['actualuser.accessToken'] && envVars['actualuser.refreshToken']);
+  
+  const hasValidTokens = autoLoginValidation.isValid || actualUserValidation.isValid || hasPersistedTokens;
+  
+  if (!hasValidTokens) {
+    console.error('❌ Invalid or expired tokens. Please login first.');
+    console.log('AutoLogin tokens:', autoLoginValidation);
+    console.log('actualuser tokens:', actualUserValidation);
+    console.log('Persisted tokens:', {
+      hasAccessToken: !!envVars['actualuser.accessToken'],
+      hasRefreshToken: !!envVars['actualuser.refreshToken']
+    });
+    return;
+  }
+  
+  console.log('✅ Tokens validated successfully');
+  
+  // Track the request
+  trackRequest(req, 'AutoProfile');
+  
+  // Log current token status
+  const currentToken = bru.getEnvVar('actualuser.accessToken');
+  console.log(`🔑 Using access token: ${currentToken ? currentToken.substring(0, 20) + '...' : 'NOT FOUND'}`);
+}
+
+script:post-response {
+  // Auto-track this response
+  const { trackResponse, getStoredData } = require('./scripts/request-response-manager.js');
+  
+  console.log('📥 Auto-tracking profile response...');
+  
+  // Track the response
+  trackResponse(res, 'AutoProfile', {
+    persistTokens: false, // Don't overwrite login tokens
+    extractUserData: true  // Extract user profile data
+  });
+  
+  // Handle different response scenarios
+  if (res.status === 200) {
+    console.log('✅ Profile retrieved successfully');
+    
+    // Display profile data
+    const userData = getStoredData('AutoProfile', 'user');
+    console.log('\n👤 Profile Data:');
+    console.log('================');
+    console.log(`User ID: ${userData.id || 'N/A'}`);
+    console.log(`Username: ${userData.username || 'N/A'}`);
+    console.log(`Email: ${userData.email || 'N/A'}`);
+    console.log(`Full Name: ${userData.data?.fullName || 'N/A'}`);
+    
+    // Update actualuser variables with latest profile data
+    if (userData.data) {
+      const user = userData.data;
+      const fieldsToUpdate = ['username', 'email', 'fullName', 'firstName', 'lastName', 
+                             'bio', 'phone', 'location', 'website', 'profilePictureUrl'];
+      
+      fieldsToUpdate.forEach(field => {
+        if (user[field] !== undefined && user[field] !== null) {
+          bru.setEnvVar(`actualuser.${field}`, user[field].toString(), { persist: true });
+          console.log(`📝 Updated actualuser.${field}`);
+        }
+      });
+    }
+    
+  } else if (res.status === 401) {
+    console.error('❌ Unauthorized - tokens may be expired');
+    console.log('🔄 Please run AutoTrackedLogin to refresh tokens');
+    
+    // Clear invalid tokens
+    bru.setEnvVar('actualuser.accessToken', '', { persist: true });
+    bru.setEnvVar('actualuser.refreshToken', '', { persist: true });
+    
+  } else {
+    console.error(`❌ Profile request failed with status: ${res.status}`);
+    
+    // Log error details if available
+    const responseData = res.getBody();
+    if (responseData && responseData.error) {
+      console.error('Error details:', responseData.error);
+    }
+  }
+  
+  // Show request/response summary
+  
+  console.log('\n📊 Request/Response Summary:');
+  console.log('===========================');
+  
+  const requestData = getStoredData('AutoProfile', 'request');
+  const responseData = getStoredData('AutoProfile', 'response');
+  
+  console.log(`Request Method: ${requestData.method}`);
+  console.log(`Request URL: ${requestData.url}`);
+  console.log(`Response Status: ${responseData.status}`);
+  console.log(`Response Time: ${responseData.time}`);
+  console.log(`Response Duration: ${responseData.duration}ms`);
+}

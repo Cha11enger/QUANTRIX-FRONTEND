@@ -1,0 +1,37 @@
+meta {
+  name: Get API Documentation
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/api/docs
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+docs {
+  # Get API Documentation
+  
+  This endpoint returns comprehensive OpenAPI documentation for the API including:
+  - Complete API specification in OpenAPI 3.0 format
+  - Detailed endpoint descriptions
+  - Request/response schemas
+  - Authentication requirements
+  - Example requests and responses
+  - Available tags and categories
+  
+  ## Response
+  Returns a JSON object containing the full OpenAPI specification with:
+  - API info (title, version, description)
+  - Server configurations
+  - Security schemes
+  - Path definitions with operations
+  - Component schemas
+  - Tags for endpoint categorization
+}

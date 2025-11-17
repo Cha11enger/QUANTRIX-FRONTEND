@@ -1,0 +1,40 @@
+meta {
+  name: TokenFormatTest
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health/basic
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // Test with a simple token format first
+  const simpleToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+  
+  console.log("=== Testing Token Format Storage ===");
+  console.log("Storing simple token...");
+  bru.setEnvVar('test.simpleToken', simpleToken, { persist: true });
+  
+  console.log("Storing actual token from login...");
+  const actualToken = bru.getEnvVar('actualuser.accessToken');
+  console.log("Actual token found:", actualToken ? 'YES' : 'NO');
+  if (actualToken) {
+    bru.setEnvVar('test.actualToken', actualToken, { persist: true });
+  }
+  
+  console.log("Testing different variable names...");
+  bru.setEnvVar('test.accessToken', simpleToken, { persist: true });
+  bru.setEnvVar('test.token', simpleToken, { persist: true });
+}
+
+script:post-response {
+  console.log("=== Retrieving Test Tokens ===");
+  console.log("test.simpleToken:", bru.getEnvVar('test.simpleToken') ? 'FOUND' : 'NOT FOUND');
+  console.log("test.actualToken:", bru.getEnvVar('test.actualToken') ? 'FOUND' : 'NOT FOUND');
+  console.log("test.accessToken:", bru.getEnvVar('test.accessToken') ? 'FOUND' : 'NOT FOUND');
+  console.log("test.token:", bru.getEnvVar('test.token') ? 'FOUND' : 'NOT FOUND');
+  console.log("actualuser.accessToken:", bru.getEnvVar('actualuser.accessToken') ? 'FOUND' : 'NOT FOUND');
+}

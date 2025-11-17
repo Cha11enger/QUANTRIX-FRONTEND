@@ -1,0 +1,29 @@
+meta {
+  name: Get Available Versions
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/api/versions
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+docs {
+  # Get Available API Versions
+  
+  This endpoint returns information about all available API versions including:
+  - Current version
+  - Supported versions
+  - Version release dates
+  - Compatibility information
+  
+  ## Response
+  Returns a JSON array of available API versions with their details.
+}

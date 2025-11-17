@@ -1,0 +1,178 @@
+meta {
+  name: Test Connection
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/supabase/test
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{requestId}}
+}
+
+vars:pre-request {
+  requestId: {{$timestamp}}-{{$randomUUID}}
+}
+
+script:pre-request {
+  // Generate unique request ID
+  bru.setVar("requestId", `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  
+  // Check if access token is available
+  const accessToken = bru.getEnvVar("accessToken");
+  if (!accessToken) {
+    console.log("⚠️ No access token found. Please login first.");
+  }
+  
+  console.log(`🔌 Testing Supabase connection - Request ID: ${bru.getVar("requestId")}`);
+}
+
+script:post-response {
+  const { status, data } = res;
+  
+  if (status === 200) {
+    console.log(`✅ Supabase connection test successful`);
+    console.log(`🗄️ Database: ${data.database?.status || 'Unknown'}`);
+    console.log(`🔐 Auth: ${data.auth?.status || 'Unknown'}`);
+    console.log(`📁 Storage: ${data.storage?.status || 'Unknown'}`);
+    console.log(`⚡ Realtime: ${data.realtime?.status || 'Unknown'}`);
+    
+    // Store connection status
+    bru.setEnvVar("supabaseConnectionStatus", "connected");
+    bru.setEnvVar("supabaseDatabaseStatus", data.database?.status || "unknown");
+    bru.setEnvVar("supabaseAuthStatus", data.auth?.status || "unknown");
+  } else {
+    console.log(`❌ Supabase connection test failed: ${status}`);
+    bru.setEnvVar("supabaseConnectionStatus", "failed");
+  }
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should contain connection status", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('status');
+    expect(body).to.have.property('timestamp');
+    expect(body).to.have.property('services');
+  });
+  
+  test("Overall status should be healthy", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal('healthy');
+  });
+  
+  test("Database service should be available", function() {
+    const body = res.getBody();
+    expect(body.services).to.have.property('database');
+    expect(body.services.database).to.have.property('status');
+    expect(body.services.database.status).to.be.oneOf(['healthy', 'connected', 'available']);
+  });
+  
+  test("Auth service should be available", function() {
+    const body = res.getBody();
+    expect(body.services).to.have.property('auth');
+    expect(body.services.auth).to.have.property('status');
+    expect(body.services.auth.status).to.be.oneOf(['healthy', 'connected', 'available']);
+  });
+  
+  test("Storage service should be available", function() {
+    const body = res.getBody();
+    expect(body.services).to.have.property('storage');
+    expect(body.services.storage).to.have.property('status');
+    expect(body.services.storage.status).to.be.oneOf(['healthy', 'connected', 'available']);
+  });
+  
+  test("Response time should be reasonable", function() {
+    const body = res.getBody();
+    if (body.responseTime) {
+      expect(body.responseTime).to.be.lessThan(5000); // Less than 5 seconds
+    }
+  });
+  
+  test("Timestamp should be recent", function() {
+    const body = res.getBody();
+    const timestamp = new Date(body.timestamp);
+    const now = new Date();
+    const diffMinutes = (now - timestamp) / (1000 * 60);
+    expect(diffMinutes).to.be.lessThan(1); // Within last minute
+  });
+}
+
+docs {
+  # Test Supabase Connection
+  
+  Tests the connection to Supabase services and returns the status of each service.
+  
+  ## Authentication
+  - Requires: Bearer token (accessToken)
+  - Roles: Admin or Moderator
+  
+  ## Response
+  Returns a connection status object with:
+  - `status`: Overall connection status ('healthy', 'degraded', 'unhealthy')
+  - `timestamp`: Test execution timestamp
+  - `responseTime`: Total response time in milliseconds
+  - `services`: Object containing status of each service
+  
+  ## Services Tested
+  
+  ### Database
+  - Tests PostgreSQL database connectivity
+  - Verifies read/write operations
+  - Checks connection pool status
+  
+  ### Authentication
+  - Tests Supabase Auth service
+  - Verifies JWT token validation
+  - Checks user management capabilities
+  
+  ### Storage
+  - Tests Supabase Storage service
+  - Verifies file upload/download capabilities
+  - Checks bucket accessibility
+  
+  ### Realtime
+  - Tests Supabase Realtime service
+  - Verifies WebSocket connections
+  - Checks subscription capabilities
+  
+  ## Status Values
+  - `healthy`: Service is fully operational
+  - `connected`: Service is accessible but may have limitations
+  - `degraded`: Service is partially operational
+  - `unavailable`: Service is not accessible
+  - `error`: Service encountered an error
+  
+  ## Environment Variables Set
+  - `supabaseConnectionStatus`: Overall connection status
+  - `supabaseDatabaseStatus`: Database service status
+  - `supabaseAuthStatus`: Auth service status
+  
+  ## Usage
+  This endpoint is used to:
+  - Monitor Supabase service health
+  - Diagnose connection issues
+  - Validate service configurations
+  - Perform health checks in CI/CD pipelines
+  - Monitor service availability
+  
+  ## Troubleshooting
+  If the test fails, check:
+  - Supabase project URL and keys
+  - Network connectivity
+  - Service quotas and limits
+  - API key permissions
+  - Database connection limits
+}

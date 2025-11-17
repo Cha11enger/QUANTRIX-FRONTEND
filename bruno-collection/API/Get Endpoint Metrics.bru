@@ -1,0 +1,41 @@
+meta {
+  name: Get Endpoint Metrics
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/api/endpoint/metrics
+  body: none
+  auth: none
+}
+
+params:query {
+  version: v1
+  endpoint: /health
+  method: GET
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+docs {
+  # Get Endpoint Metrics
+  
+  This endpoint returns performance metrics for a specific API endpoint including:
+  - Request count
+  - Average response time
+  - Error rate
+  - Success rate
+  - Peak usage times
+  
+  ## Query Parameters
+  - `version` (required): API version (e.g., "v1")
+  - `endpoint` (required): Endpoint path (e.g., "/health")
+  - `method` (required): HTTP method (e.g., "GET", "POST")
+  
+  ## Response
+  Returns detailed performance metrics for the specified endpoint.
+}

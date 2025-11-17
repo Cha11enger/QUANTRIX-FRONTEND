@@ -1,0 +1,258 @@
+meta {
+  name: Get Profile
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/users/me/profile
+  body: none
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+  Authorization: Bearer {{actualuser.accessToken}}
+}
+
+auth:bearer {
+  token: {{actualuser.accessToken}}
+}
+
+script:pre-request {
+  // Pre-request script for Get Profile API
+  // Validates that access token exists and is not expired
+  
+  console.log('=== Get Profile Pre-Request Script ===');
+  
+  // Check if access token exists
+  const accessToken = bru.getEnvVar('actualuser.accessToken');
+  if (!accessToken || accessToken === 'your-access-token-here') {
+    console.warn('Warning: No valid access token found. Please login first.');
+    console.log('Setting default token placeholder for testing...');
+    bru.setEnvVar('actualuser.accessToken', 'your-access-token-here');
+  } else {
+    console.log('Access token found, proceeding with profile request...');
+  }
+  
+  // Check token expiry if available
+  const tokenExpiry = bru.getEnvVar('actualuser.tokenExpiry');
+  if (tokenExpiry) {
+    const expiryTime = new Date(tokenExpiry);
+    const currentTime = new Date();
+    
+    if (currentTime >= expiryTime) {
+      console.warn('Warning: Access token appears to be expired. Consider refreshing token.');
+    } else {
+      console.log('Access token is still valid.');
+    }
+  }
+  
+  console.log('Pre-request validation completed.');
+}
+
+script:post-response {
+  // Post-response script for Get Profile API
+  // Updates environment with latest user profile information
+  
+  console.log('=== Get Profile Post-Response Script ===');
+  console.log('Response Status:', res.status);
+  
+  try {
+    if (res.status === 200) {
+      const responseBody = res.getBody();
+      console.log('Profile retrieved successfully');
+      
+      if (responseBody && responseBody.success && responseBody.data && responseBody.data.user) {
+        const user = responseBody.data.user;
+        
+        // Update core user profile information in environment
+        bru.setEnvVar('actualuser.userId', user.id || '', {persist: true});
+        bru.setEnvVar('actualuser.username', user.username || '', {persist: true});
+        bru.setEnvVar('actualuser.email', user.email || '', {persist: true});
+        bru.setEnvVar('actualuser.firstName', user.firstName || '', {persist: true});
+        bru.setEnvVar('actualuser.lastName', user.lastName || '', {persist: true});
+        bru.setEnvVar('actualuser.fullName', user.fullName || '', {persist: true});
+        bru.setEnvVar('actualuser.accountIdentifier', user.accountIdentifier || '', {persist: true});
+        bru.setEnvVar('actualuser.dataSharingIdentifier', user.dataSharingIdentifier || '', {persist: true});
+        bru.setEnvVar('actualuser.currentRole', user.currentRole || '', {persist: true});
+        bru.setEnvVar('actualuser.organizationName', user.organizationName || '', {persist: true});
+        bru.setEnvVar('actualuser.accountName', user.accountName || '', {persist: true});
+        bru.setEnvVar('actualuser.companyName', user.companyName || '', {persist: true});
+        bru.setEnvVar('actualuser.isVerified', user.isVerified ? user.isVerified.toString() : 'false', {persist: true});
+        
+        // Update additional profile fields (bio, phone, location, website, profilePictureUrl)
+        bru.setEnvVar('actualuser.bio', user.bio || '', {persist: true});
+        bru.setEnvVar('actualuser.phone', user.phone || '', {persist: true});
+        bru.setEnvVar('actualuser.location', user.location || '', {persist: true});
+        bru.setEnvVar('actualuser.website', user.website || '', {persist: true});
+        bru.setEnvVar('actualuser.profilePictureUrl', user.profilePictureUrl || '', {persist: true});
+        
+        // Update timestamps
+        bru.setEnvVar('actualuser.createdAt', user.createdAt || '', {persist: true});
+        bru.setEnvVar('actualuser.updatedAt', user.updatedAt || '', {persist: true});
+        bru.setEnvVar('actualuser.profileLastUpdated', new Date().toISOString(), {persist: true});
+        
+        // Store roles as JSON string for complex data
+        if (user.roles && Array.isArray(user.roles)) {
+          bru.setEnvVar('actualuser.roles', JSON.stringify(user.roles), {persist: true});
+        }
+        
+        console.log('✅ Complete profile information updated in environment:');
+        console.log('📋 Core Information:');
+        console.log('  - User ID:', user.id);
+        console.log('  - Username:', user.username);
+        console.log('  - Email:', user.email);
+        console.log('  - Full Name:', user.fullName);
+        console.log('  - Current Role:', user.currentRole);
+        console.log('  - Account Identifier:', user.accountIdentifier);
+        console.log('  - Company:', user.companyName);
+        console.log('  - Verified Status:', user.isVerified);
+        console.log('📝 Additional Profile Fields:');
+        console.log('  - Bio:', user.bio || '(not set)');
+        console.log('  - Phone:', user.phone || '(not set)');
+        console.log('  - Location:', user.location || '(not set)');
+        console.log('  - Website:', user.website || '(not set)');
+        console.log('  - Profile Picture:', user.profilePictureUrl || '(not set)');
+        
+      } else {
+        console.warn('Warning: Unexpected response structure for successful profile request');
+      }
+      
+    } else if (res.status === 401) {
+      console.error('❌ Authentication failed - Token invalid or expired');
+      
+      // Clear potentially invalid token information
+      bru.setEnvVar('actualuser.accessToken', '', {persist: true});
+      bru.setEnvVar('actualuser.tokenExpiry', '', {persist: true});
+      
+      console.log('Cleared invalid token from environment. Please login again.');
+      
+    } else if (res.status === 403) {
+      console.error('❌ Access forbidden - Token valid but insufficient permissions');
+      
+    } else if (res.status === 404) {
+      console.error('❌ User not found - Profile may have been deleted');
+      
+    } else if (res.status === 429) {
+      console.error('❌ Rate limit exceeded - Too many profile requests');
+      
+    } else if (res.status >= 500) {
+      console.error('❌ Server error occurred while fetching profile');
+      
+    } else {
+      console.error('❌ Unexpected response status:', res.status);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing profile response:', error.message);
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+docs {
+  # Get User Profile
+  
+  This endpoint retrieves the authenticated user's profile information. This is a protected endpoint that requires a valid access token.
+  
+  ## Authentication Required
+  
+  This endpoint requires authentication via Bearer token:
+  - Include the access token in the Authorization header
+  - Token must be valid and not expired
+  - Token must belong to an active user account
+  
+  ## Request Headers
+  
+  - **Authorization** (required): Bearer token obtained from login
+    - Format: `Bearer <access_token>`
+    - Token expires after 15 minutes
+  - **X-Request-ID** (optional): Unique request identifier for tracking
+  
+  ## Success Response (200)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "user": {
+        "id": "uuid",
+        "username": "johndoe123",
+        "email": "john.doe@example.com",
+        "firstName": "John",
+        "lastName": "Doe",
+        "fullName": "John Doe",
+        "accountIdentifier": "FVMOPWL-BFLRUT8N",
+        "dataSharingIdentifier": "FVMOPWL.BFLRUT8N",
+        "currentRole": "ACCOUNTADMIN",
+        "roles": ["ACCOUNTADMIN", "DATAENGINEER", "DATAANALYST", "VIEWER"],
+        "organizationName": "Generated Org Name",
+        "accountName": "BFLRUT8N",
+        "companyName": "Acme Corporation",
+        "isVerified": true,
+        "createdAt": "2025-01-01T00:00:00.000Z",
+        "updatedAt": "2025-01-01T00:00:00.000Z"
+      }
+    },
+    "message": "Profile retrieved successfully",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  ## Profile Information Includes
+  
+  - **Basic Info**: Username, email, first/last name
+  - **Account Details**: Account identifier, organization info
+  - **Role Information**: Current active role and all assigned roles
+  - **Company Info**: Company name if provided during registration
+  - **Account Status**: Verification status and timestamps
+  
+  ## Error Responses
+  
+  **401 Unauthorized** - Missing or invalid token:
+  ```json
+  {
+    "success": false,
+    "error": "Access token is required",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **401 Unauthorized** - Expired token:
+  ```json
+  {
+    "success": false,
+    "error": "Token has expired",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **403 Forbidden** - Invalid token:
+  ```json
+  {
+    "success": false,
+    "error": "Invalid access token",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **404 Not Found** - User not found:
+  ```json
+  {
+    "success": false,
+    "error": "User not found",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **429 Too Many Requests** - Rate limit exceeded
+  **500 Internal Server Error** - Server error
+  
+  ## Usage Notes
+  
+  - Use this endpoint to get current user information
+  - Profile data reflects the latest user state
+  - Role information shows both current active role and all assigned roles
+  - Token must be refreshed if expired (use refresh token endpoint)
+}

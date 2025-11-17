@@ -1,0 +1,162 @@
+meta {
+  name: Service Health Check
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health/service/{{serviceName}}
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+vars:pre-request {
+  serviceName: database
+}
+
+script:pre-request {
+  // Pre-request script for Service Health Check API
+  // Checks health of a specific service component
+  
+  console.log('=== Service Health Check Pre-Request Script ===');
+  
+  // Set service health check timestamp
+  const currentTime = new Date().toISOString();
+  const serviceName = bru.getVar('serviceName') || 'unknown';
+  
+  bru.setEnvVar(`healthcheck.service.${serviceName}.lastAttempt`, currentTime);
+  
+  // Log service health check initiation
+  console.log(`Initiating health check for service: ${serviceName}`);
+  console.log('Timestamp:', currentTime);
+  
+  console.log('Pre-request setup completed.');
+}
+
+script:post-response {
+  // Post-response script for Service Health Check API
+  // Logs specific service health status
+  
+  console.log('=== Service Health Check Post-Response Script ===');
+  
+  const currentTime = new Date().toISOString();
+  const serviceName = bru.getVar('serviceName') || 'unknown';
+  
+  // Check response status and handle accordingly
+  if (res.status === 200) {
+    const responseBody = res.getBody();
+    console.log(`✅ Service health check successful for: ${serviceName}`);
+    
+    if (responseBody && responseBody.success && responseBody.data) {
+      const data = responseBody.data;
+      
+      // Store service health information
+      bru.setEnvVar(`healthcheck.service.${serviceName}.lastSuccess`, currentTime, {persist: true});
+      bru.setEnvVar(`healthcheck.service.${serviceName}.status`, data.status || 'unknown', {persist: true});
+      bru.setEnvVar(`healthcheck.service.${serviceName}.name`, data.name || serviceName, {persist: true});
+      bru.setEnvVar(`healthcheck.service.${serviceName}.uptime`, data.uptime?.toString() || '0', {persist: true});
+      
+      // Clear any previous failure information
+      bru.setEnvVar(`healthcheck.service.${serviceName}.lastFailure`, '', {persist: true});
+      bru.setEnvVar(`healthcheck.service.${serviceName}.failureReason`, '', {persist: true});
+      
+      console.log(`✅ Service health information updated for ${serviceName}:`);
+      console.log('- Status:', data.status);
+      console.log('- Name:', data.name);
+      console.log('- Uptime:', data.uptime);
+      
+      // Preserve authentication environment variables
+      const preserveAuthVars = [
+        'refreshToken', 'accessToken', 'username', 'email', 'accountIdentifier',
+        'password', 'confirmPassword', 'firstName', 'lastName', 'companyName',
+        'organizationName', 'tokenExpiry', 'refreshTokenExpiry', 'userId',
+        'isLoggedIn', 'lastLoginTime', 'isVerified', 'lastVerificationTime'
+      ];
+      
+      preserveAuthVars.forEach(varName => {
+        const value = bru.getEnvVar(varName);
+        if (value) {
+          bru.setEnvVar(varName, value, {persist: true});
+        }
+      });
+      
+    } else {
+      console.log('⚠️ Unexpected response format');
+      bru.setEnvVar(`healthcheck.service.${serviceName}.lastFailure`, currentTime, {persist: true});
+      bru.setEnvVar(`healthcheck.service.${serviceName}.failureReason`, 'Unexpected response format', {persist: true});
+    }
+    
+  } else {
+    console.log(`❌ Service health check failed for ${serviceName} with status: ${res.status}`);
+    bru.setEnvVar(`healthcheck.service.${serviceName}.lastFailure`, currentTime, {persist: true});
+    bru.setEnvVar(`healthcheck.service.${serviceName}.failureReason`, `HTTP ${res.status}`, {persist: true});
+    bru.setEnvVar(`healthcheck.service.${serviceName}.status`, 'failed', {persist: true});
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+docs {
+  # Service Health Check API
+  
+  ## Overview
+  This endpoint checks the health status of a specific service component by name.
+  
+  ## Endpoint
+  `GET /api/v1/health/service/{serviceName}`
+  
+  ## Parameters
+  - `serviceName` (path) - Name of the service to check (e.g., database, cache, external-api)
+  
+  ## Response Format
+  
+  **200 OK** - Service health information
+  ```json
+  {
+    "success": true,
+    "data": {
+      "name": "database",
+      "status": "healthy|unhealthy|degraded",
+      "timestamp": "2025-11-01T07:49:23.857Z",
+      "uptime": 72.0036264
+    },
+    "timestamp": "2025-11-01T07:49:23.857Z"
+  }
+  ```
+  
+  ## Available Services
+  - `database` - Database connectivity check
+  - `memory` - Memory usage validation
+  - `uptime` - Application uptime check
+  - `disk` - Disk space validation
+  - `external-api` - External service connectivity
+  
+  ## Use Cases
+  - Individual service monitoring
+  - Targeted health diagnostics
+  - Service dependency validation
+  - Granular alerting and monitoring
+  - Service-specific troubleshooting
+  
+  ## Environment Variables Set
+  - `healthcheck.service.{serviceName}.lastSuccess` - Last successful check
+  - `healthcheck.service.{serviceName}.status` - Current service status
+  - `healthcheck.service.{serviceName}.name` - Service name
+  - `healthcheck.service.{serviceName}.uptime` - Service uptime
+  
+  ## Usage Examples
+  
+  ### Check Database Health
+  Set `serviceName` variable to `database`
+  
+  ### Check Memory Health
+  Set `serviceName` variable to `memory`
+  
+  ### Check External API Health
+  Set `serviceName` variable to `external-api`
+}

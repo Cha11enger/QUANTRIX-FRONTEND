@@ -6,7 +6,7 @@ import { Database, Chrome as Home, Code, MessageSquare, Settings, Sun, Moon, Log
 import { useAuthStore, useAppStore } from '@/lib/store';
 import { mockConnections } from '@/lib/data';
 import { AuthService } from '@/lib/api';
-import { useState, useCallback, useMemo, forwardRef } from 'react';
+import { useState, useCallback, useMemo, forwardRef, useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -117,9 +117,33 @@ export function IconSidebar() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [accountDetailsOpen, setAccountDetailsOpen] = useState(false);
   
-  // Get available roles from the active connection
-  const activeConn = mockConnections.find(conn => conn.id === activeConnection);
-  const availableRoles = activeConn?.snowflakeContext?.roles || ['ACCOUNTADMIN', 'SYSADMIN', 'USERADMIN', 'SECURITYADMIN', 'PUBLIC', 'ORGADMIN', 'SNOWFLAKE_LEARNING_ROLE'];
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  const [roleIdMap, setRoleIdMap] = useState<Record<string, string>>({});
+  const { rolesRefreshTick } = useAppStore();
+
+  // Fetch roles from API and filter only active ones
+  useEffect(() => {
+    let mounted = true;
+    const fetchRoles = async () => {
+      try {
+        const data = await AuthService.getUserRoles();
+        const system = (data.systemRoles || []).map(r => ({ name: r.name, id: String(r.id), active: (r as any).user_role_is_active ?? true }));
+        const custom = (data.customRoles || []).map(r => ({ name: r.name, id: String(r.id), active: (r as any).is_active ?? true }));
+        const activeRoles = [...system, ...custom].filter(r => r.active);
+        const names = activeRoles.map(r => r.name);
+        const idMap: Record<string, string> = {};
+        activeRoles.forEach(r => { idMap[r.name] = r.id; });
+        if (mounted) {
+          setAvailableRoles(names);
+          setRoleIdMap(idMap);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch roles', e);
+      }
+    };
+    fetchRoles();
+    return () => { mounted = false; };
+  }, [activeConnection, rolesRefreshTick]);
 
   const handleLogout = async () => {
     try {
@@ -133,6 +157,11 @@ export function IconSidebar() {
       logout();
       router.push('/login');
     }
+  };
+
+  const handleSignOut = async () => {
+    setProfileDropdownOpen(false);
+    await handleLogout();
   };
 
   const NavContent = () => (
@@ -225,20 +254,17 @@ export function IconSidebar() {
           >
             {/* User Info Header */}
             <div className="px-3 py-3 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">
-                  {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {user?.name || 'User'}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {currentRole}
-                  </p>
-                </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {user?.name || 'testuser'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {currentRole}
+                </p>
               </div>
             </div>
+
+            <DropdownMenuSeparator />
 
             {/* Switch Role with Submenu */}
             <DropdownMenu>
@@ -274,8 +300,17 @@ export function IconSidebar() {
                         <CommandItem
                           key={role}
                           onSelect={() => {
-                            setCurrentRole(role);
-                            setProfileDropdownOpen(false);
+                            const roleId = roleIdMap[role];
+                            if (roleId) {
+                              AuthService.switchCurrentRole(roleId)
+                                .then(() => {
+                                  setTimeout(() => {
+                                    setCurrentRole(role);
+                                    setProfileDropdownOpen(false);
+                                  }, 0);
+                                })
+                                .catch(err => console.warn('Switch role failed', err));
+                            }
                           }}
                           className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
@@ -346,7 +381,7 @@ export function IconSidebar() {
                     </div>
                   </div>
                   
-                  <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-1">
                     <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                       <LogOut className="w-4 h-4" />
                       <span>Sign Into Another Account</span>
@@ -355,6 +390,7 @@ export function IconSidebar() {
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
+
             {/* Settings */}
             <DropdownMenuItem 
               onClick={() => {
@@ -366,6 +402,17 @@ export function IconSidebar() {
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 <span className="text-gray-900 dark:text-white">Settings</span>
+              </div>
+            </DropdownMenuItem>
+
+            {/* Logout */}
+            <DropdownMenuItem 
+              onClick={handleLogout}
+              className="px-3 py-2 text-sm cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              <div className="flex items-center gap-2">
+                <LogOut className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <span className="text-red-600 dark:text-red-400">Logout</span>
               </div>
             </DropdownMenuItem>
           </DropdownMenuContent>

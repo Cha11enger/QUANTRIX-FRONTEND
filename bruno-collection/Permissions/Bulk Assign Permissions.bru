@@ -1,0 +1,37 @@
+meta {
+  name: Bulk Assign Permissions
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/permissions/assign/bulk
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+  Authorization: Bearer {{actualuser.accessToken}}
+}
+
+auth:bearer {
+  token: {{actualuser.accessToken}}
+}
+
+body:json {
+  {
+    "roleIds": {{bulk.roleIds}},
+    "permissionIds": {{bulk.permissionIds}},
+    "roleId": "{{bulk.roleId}}",
+    "permissionId": "{{bulk.permissionId}}"
+  }
+}
+
+tests {
+  test("Status is 201/207/400", function() {
+    const s = res.getStatus();
+    expect([201,207,400]).to.include(s);
+  });
+}

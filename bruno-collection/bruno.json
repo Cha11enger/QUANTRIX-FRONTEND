@@ -1,0 +1,17 @@
+{
+  "version": "1",
+  "name": "QUANTRIX API Collection",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ],
+  "scripts": {
+    "filesystemAccess": {
+      "allow": true
+    },
+    "moduleWhitelist": [
+      "form-data"
+    ]
+  }
+}

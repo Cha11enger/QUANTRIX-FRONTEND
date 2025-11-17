@@ -1,0 +1,68 @@
+meta {
+  name: List All Permissions
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/permissions{{qs}}
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+  Authorization: Bearer {{actualuser.accessToken}}
+}
+
+auth:bearer {
+  token: {{actualuser.accessToken}}
+}
+
+script:pre-request {
+  const token = bru.getEnvVar('actualuser.accessToken');
+  if (!token) { throw new Error('Access token is required'); }
+  const category = bru.getEnvVar('permissions.category') || '';
+  const sortBy = bru.getEnvVar('permissions.sortBy') || 'name';
+  const order = bru.getEnvVar('permissions.order') || 'asc';
+  const page = bru.getEnvVar('permissions.page') || 1;
+  const pageSize = bru.getEnvVar('permissions.pageSize') || 50;
+  const params = [];
+  if (category) params.push(`category=${encodeURIComponent(category)}`);
+  if (sortBy) params.push(`sortBy=${encodeURIComponent(sortBy)}`);
+  if (order) params.push(`order=${encodeURIComponent(order)}`);
+  if (page) params.push(`page=${encodeURIComponent(page)}`);
+  if (pageSize) params.push(`pageSize=${encodeURIComponent(pageSize)}`);
+  const qs = params.length ? `?${params.join('&')}` : '';
+  bru.setVar('qs', qs);
+}
+
+script:post-response {
+  const status = res.getStatus();
+  const body = res.getBody();
+  bru.setEnvVar('lastPermissionsStatus', String(status), { persist: true });
+  const count = body && body.pagination ? body.pagination.total : (body && body.data ? body.data.length : 0);
+  bru.setEnvVar('lastPermissionsCount', String(count), { persist: true });
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Response has data array", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('data');
+    expect(body.data).to.be.an('array');
+  });
+  test("Items have required fields", function() {
+    const body = res.getBody();
+    if (body.data.length > 0) {
+      const item = body.data[0];
+      expect(item).to.have.property('id');
+      expect(item).to.have.property('name');
+      expect(item).to.have.property('description');
+      expect(item).to.have.property('resource');
+      expect(item).to.have.property('scope');
+    }
+  });
+}

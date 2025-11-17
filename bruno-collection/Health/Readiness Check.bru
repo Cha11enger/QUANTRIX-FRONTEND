@@ -1,0 +1,151 @@
+meta {
+  name: Readiness Check
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health/readiness
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+script:pre-request {
+  // Pre-request script for Readiness Check API
+  // Used for Kubernetes readiness probes
+  
+  console.log('=== Readiness Check Pre-Request Script ===');
+  
+  // Set readiness check timestamp
+  const currentTime = new Date().toISOString();
+  bru.setEnvVar('healthcheck.readiness.lastAttempt', currentTime);
+  
+  // Log readiness check initiation
+  console.log('Initiating Kubernetes readiness probe...');
+  console.log('Timestamp:', currentTime);
+  
+  console.log('Pre-request setup completed.');
+}
+
+script:post-response {
+  // Post-response script for Readiness Check API
+  // Logs readiness status for Kubernetes orchestration
+  
+  console.log('=== Readiness Check Post-Response Script ===');
+  
+  const currentTime = new Date().toISOString();
+  
+  // Check response status and handle accordingly
+  if (res.status === 200) {
+    const responseBody = res.getBody();
+    console.log('✅ Readiness check successful');
+    
+    if (responseBody && responseBody.success && responseBody.data) {
+      const data = responseBody.data;
+      
+      // Store readiness information
+      bru.setEnvVar('healthcheck.readiness.lastSuccess', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.readiness.status', data.status || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.readiness.version', data.version || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.readiness.environment', data.environment || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.readiness.uptime', data.uptime?.toString() || '0', {persist: true});
+      
+      // Clear any previous failure information
+      bru.setEnvVar('healthcheck.readiness.lastFailure', '', {persist: true});
+      bru.setEnvVar('healthcheck.readiness.failureReason', '', {persist: true});
+      
+      console.log('✅ Readiness information updated:');
+      console.log('- Status:', data.status);
+      console.log('- Version:', data.version);
+      console.log('- Environment:', data.environment);
+      console.log('- Uptime:', data.uptime);
+      
+      // Preserve authentication environment variables
+      const preserveAuthVars = [
+        'refreshToken', 'accessToken', 'username', 'email', 'accountIdentifier',
+        'password', 'confirmPassword', 'firstName', 'lastName', 'companyName',
+        'organizationName', 'tokenExpiry', 'refreshTokenExpiry', 'userId',
+        'isLoggedIn', 'lastLoginTime', 'isVerified', 'lastVerificationTime'
+      ];
+      
+      preserveAuthVars.forEach(varName => {
+        const value = bru.getEnvVar(varName);
+        if (value) {
+          bru.setEnvVar(varName, value, {persist: true});
+        }
+      });
+      
+    } else {
+      console.log('⚠️ Unexpected response format');
+      bru.setEnvVar('healthcheck.readiness.lastFailure', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.readiness.failureReason', 'Unexpected response format', {persist: true});
+    }
+    
+  } else {
+    console.log(`❌ Readiness check failed with status: ${res.status}`);
+    bru.setEnvVar('healthcheck.readiness.lastFailure', currentTime, {persist: true});
+    bru.setEnvVar('healthcheck.readiness.failureReason', `HTTP ${res.status}`, {persist: true});
+    bru.setEnvVar('healthcheck.readiness.status', 'NOT_READY', {persist: true});
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+docs {
+  # Readiness Check API
+  
+  ## Overview
+  This endpoint is designed for Kubernetes readiness probes to determine if the application is ready to serve traffic.
+  
+  ## Endpoint
+  `GET /api/v1/health/readiness`
+  
+  ## Response Format
+  
+  **200 OK** - Application is ready
+  ```json
+  {
+    "success": true,
+    "data": {
+      "status": "READY|NOT_READY",
+      "timestamp": "2025-11-01T07:48:51.332Z",
+      "uptime": 39.4787919,
+      "version": "0.0.0",
+      "environment": "development"
+    },
+    "timestamp": "2025-11-01T07:48:51.332Z"
+  }
+  ```
+  
+  ## Kubernetes Integration
+  
+  Use this endpoint in your Kubernetes deployment:
+  
+  ```yaml
+  readinessProbe:
+    httpGet:
+      path: /api/v1/health/readiness
+      port: 5000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  ```
+  
+  ## Use Cases
+  - Kubernetes readiness probes
+  - Load balancer health checks
+  - Service mesh integration
+  - Traffic routing decisions
+  
+  ## Environment Variables Set
+  - `healthcheck.readiness.lastSuccess` - Last successful check timestamp
+  - `healthcheck.readiness.status` - Current readiness status
+  - `healthcheck.readiness.version` - Application version
+  - `healthcheck.readiness.uptime` - Application uptime in seconds
+}

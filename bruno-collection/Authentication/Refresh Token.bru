@@ -1,0 +1,255 @@
+meta {
+  name: Refresh Token
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/auth/refresh
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+body:json {
+  {
+    "refreshToken": "{{actualuser.refreshToken}}"
+  }
+}
+
+script:pre-request {
+  // Pre-request script for Refresh Token API
+  // Validates that refresh token exists and sets up request
+  
+  console.log('=== Refresh Token Pre-Request Script ===');
+  
+  // Check if refresh token exists
+  const refreshToken = bru.getEnvVar('actualuser.refreshToken');
+  if (!refreshToken || refreshToken === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...') {
+    console.warn('Warning: No valid refresh token found.');
+    console.log('Setting default refresh token placeholder for testing...');
+    bru.setEnvVar('actualuser.refreshToken', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+  } else {
+    console.log('Refresh token found, proceeding with token refresh...');
+  }
+  
+  // Check refresh token expiry if available
+  const refreshTokenExpiry = bru.getEnvVar('actualuser.refreshTokenExpiry');
+  if (refreshTokenExpiry) {
+    const expiryTime = new Date(refreshTokenExpiry);
+    const currentTime = new Date();
+    
+    if (currentTime >= expiryTime) {
+      console.warn('Warning: Refresh token appears to be expired. User may need to login again.');
+    } else {
+      console.log('Refresh token is still valid.');
+    }
+  }
+  
+  // Log current access token status
+  const accessToken = bru.getEnvVar('actualuser.accessToken');
+  const accessTokenExpiry = bru.getEnvVar('actualuser.accessTokenExpiry');
+  
+  if (accessTokenExpiry) {
+    const accessExpiryTime = new Date(accessTokenExpiry);
+    const currentTime = new Date();
+    
+    if (currentTime >= accessExpiryTime) {
+      console.log('Access token is expired, refresh is needed.');
+    } else {
+      console.log('Access token is still valid, but refreshing anyway.');
+    }
+  }
+  
+  console.log('Pre-request validation completed.');
+}
+
+script:post-response {
+  // Post-response script for Refresh Token API
+  // Updates environment with new access token and user information
+  
+  console.log('=== Refresh Token Post-Response Script ===');
+  console.log('Response Status:', res.status);
+  
+  try {
+    if (res.status === 200) {
+      const responseBody = res.getBody();
+      console.log('Token refresh successful');
+      
+      if (responseBody && responseBody.success && responseBody.data) {
+        const data = responseBody.data;
+        
+        // Update access token and calculate expiry (15 minutes from now)
+        if (data.accessToken) {
+          const currentTime = new Date();
+          const accessTokenExpiry = new Date(currentTime.getTime() + 15 * 60 * 1000); // 15 minutes
+          
+          bru.setEnvVar('actualuser.accessToken', data.accessToken, {persist: true});
+          bru.setEnvVar('actualuser.accessTokenExpiry', accessTokenExpiry.toISOString(), {persist: true});
+          bru.setEnvVar('actualuser.lastTokenRefresh', currentTime.toISOString(), {persist: true});
+          
+          console.log('✅ New access token stored in environment');
+          console.log('- Token expires at:', accessTokenExpiry.toISOString());
+        }
+        
+        // Update user information if provided
+        if (data.user) {
+          const user = data.user;
+          
+          bru.setEnvVar('actualuser.userId', user.id, {persist: true});
+          bru.setEnvVar('actualuser.username', user.username, {persist: true});
+          bru.setEnvVar('actualuser.email', user.email, {persist: true});
+          bru.setEnvVar('actualuser.fullName', user.fullName, {persist: true});
+          bru.setEnvVar('actualuser.accountIdentifier', user.accountIdentifier, {persist: true});
+          bru.setEnvVar('actualuser.currentRole', user.currentRole, {persist: true});
+          bru.setEnvVar('actualuser.organizationName', user.organizationName, {persist: true});
+          bru.setEnvVar('actualuser.companyName', user.companyName, {persist: true});
+          
+          // Store roles as JSON string
+          if (user.roles && Array.isArray(user.roles)) {
+            bru.setEnvVar('actualuser.roles', JSON.stringify(user.roles), {persist: true});
+          }
+          
+          console.log('✅ User information updated in environment:');
+          console.log('- User ID:', user.id);
+          console.log('- Username:', user.username);
+          console.log('- Email:', user.email);
+          console.log('- Current Role:', user.currentRole);
+          console.log('- Account Identifier:', user.accountIdentifier);
+        }
+        
+      } else {
+        console.warn('Warning: Unexpected response structure for successful token refresh');
+      }
+      
+    } else if (res.status === 400) {
+      console.error('❌ Bad request - Refresh token missing or invalid format');
+      
+    } else if (res.status === 401) {
+      console.error('❌ Unauthorized - Refresh token invalid or expired');
+      
+      // Clear invalid tokens from environment
+      bru.setEnvVar('actualuser.refreshToken', '', {persist: true});
+      bru.setEnvVar('actualuser.refreshTokenExpiry', '', {persist: true});
+      bru.setEnvVar('actualuser.accessToken', '', {persist: true});
+      bru.setEnvVar('actualuser.accessTokenExpiry', '', {persist: true});
+      
+      console.log('Cleared invalid tokens from environment. User needs to login again.');
+      
+    } else if (res.status === 403) {
+      console.error('❌ Forbidden - Refresh token has been revoked');
+      
+      // Clear revoked tokens from environment
+      bru.setEnvVar('actualuser.refreshToken', '', {persist: true});
+      bru.setEnvVar('actualuser.refreshTokenExpiry', '', {persist: true});
+      bru.setEnvVar('actualuser.accessToken', '', {persist: true});
+      bru.setEnvVar('actualuser.accessTokenExpiry', '', {persist: true});
+      
+      console.log('Cleared revoked tokens from environment. User needs to login again.');
+      
+    } else if (res.status === 429) {
+      console.error('❌ Rate limit exceeded - Too many refresh requests');
+      
+    } else if (res.status >= 500) {
+      console.error('❌ Server error occurred during token refresh');
+      
+    } else {
+      console.error('❌ Unexpected response status:', res.status);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing token refresh response:', error.message);
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+docs {
+  # Refresh Access Token
+  
+  This endpoint allows users to obtain a new access token using their refresh token. This is used when the access token expires (after 15 minutes) to maintain the user's session without requiring them to log in again.
+  
+  ## Request Body
+  
+  - **refreshToken** (string, required): A valid refresh token obtained from the login endpoint
+    - Must be a valid JWT token
+    - Must not be expired (refresh tokens expire after 7 days)
+    - Must not be blacklisted or revoked
+  
+  ## Token Refresh Process
+  
+  1. User provides their refresh token
+  2. System validates the refresh token:
+     - Checks if token is valid and not expired
+     - Verifies token signature
+     - Ensures token is not blacklisted
+  3. If valid, generates a new access token
+  4. Returns the new access token along with user information
+  5. The refresh token remains valid for continued use
+  
+  ## Success Response (200)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "user": {
+        "id": "uuid",
+        "username": "johndoe123",
+        "email": "john.doe@example.com",
+        "fullName": "John Doe",
+        "accountIdentifier": "FVMOPWL-BFLRUT8N",
+        "currentRole": "ACCOUNTADMIN",
+        "roles": ["ACCOUNTADMIN", "DATAENGINEER", "DATAANALYST", "VIEWER"],
+        "organizationName": "Generated Org Name",
+        "companyName": "Acme Corporation"
+      }
+    },
+    "message": "Token refreshed successfully",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  ## Error Responses
+  
+  **400 Bad Request** - Missing or invalid refresh token:
+  ```json
+  {
+    "success": false,
+    "error": "Refresh token is required",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **401 Unauthorized** - Invalid or expired refresh token:
+  ```json
+  {
+    "success": false,
+    "error": "Invalid or expired refresh token",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **403 Forbidden** - Blacklisted refresh token:
+  ```json
+  {
+    "success": false,
+    "error": "Refresh token has been revoked",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **429 Too Many Requests** - Rate limit exceeded
+  **500 Internal Server Error** - Server error
+  
+  ## Token Expiration
+  
+  - **Access Token**: Expires in 15 minutes
+  - **Refresh Token**: Expires in 7 days
+  - Use this endpoint before the access token expires to maintain session
+  - If refresh token expires, user must log in again
+}

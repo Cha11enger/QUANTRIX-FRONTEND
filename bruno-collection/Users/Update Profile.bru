@@ -1,0 +1,284 @@
+meta {
+  name: Update Profile
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/{{apiVersion}}/users/me/profile
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+  Authorization: Bearer {{actualuser.accessToken}}
+}
+
+auth:bearer {
+  token: {{actualuser.accessToken}}
+}
+
+body:json {
+  {
+    "firstName": "{{actualuser.firstName}}",
+    "lastName": "{{actualuser.lastName}}",
+    "username": "{{actualuser.username}}",
+    "email": "{{actualuser.email}}",
+    "companyName": "{{actualuser.companyName}}",
+    "bio": "{{actualuser.bio}}",
+    "phone": "{{actualuser.phone}}",
+    "location": "{{actualuser.location}}",
+    "website": "{{actualuser.website}}"
+  }
+}
+
+script:pre-request {
+  // Pre-request script for Update Profile API
+  // Validates that access token exists and is not expired
+  
+  console.log('=== Update Profile Pre-Request Script ===');
+  
+  // Check if access token exists
+  const accessToken = bru.getEnvVar('actualuser.accessToken');
+  if (!accessToken || accessToken === 'your-access-token-here') {
+    console.warn('Warning: No valid access token found. Please login first.');
+    console.log('Setting default token placeholder for testing...');
+    bru.setEnvVar('actualuser.accessToken', 'your-access-token-here');
+  } else {
+    console.log('Access token found, proceeding with profile update...');
+  }
+  
+  // Check token expiry if available
+  const tokenExpiry = bru.getEnvVar('actualuser.tokenExpiry');
+  if (tokenExpiry) {
+    const expiryTime = new Date(tokenExpiry);
+    const currentTime = new Date();
+    
+    if (currentTime >= expiryTime) {
+      console.warn('Warning: Access token appears to be expired. Consider refreshing token.');
+    } else {
+      console.log('Access token is still valid.');
+    }
+  }
+  
+  // Log the profile data being sent
+  console.log('Profile update data:', JSON.stringify(req.getBody(), null, 2));
+}
+
+script:post-response {
+  // Post-response script for Update Profile API
+  // Handles response validation and environment variable updates
+  
+  console.log('=== Update Profile Post-Response Script ===');
+  console.log('Response Status:', res.getStatus());
+  console.log('Response Headers:', JSON.stringify(res.getHeaders(), null, 2));
+  
+  try {
+    const responseBody = res.getBody();
+    console.log('Response Body:', JSON.stringify(responseBody, null, 2));
+    
+    if (res.getStatus() === 200) {
+      console.log('✅ Profile updated successfully!');
+      
+      // Get the request body to update environment variables with the sent data
+      const requestBody = req.getBody();
+      console.log('Request Body:', JSON.stringify(requestBody, null, 2));
+      
+      // Update environment variables with the values that were successfully sent
+      if (requestBody) {
+        if (requestBody.firstName) {
+          bru.setEnvVar('actualuser.firstName', requestBody.firstName);
+          console.log('Updated actualuser.firstName:', requestBody.firstName);
+        }
+        if (requestBody.lastName) {
+          bru.setEnvVar('actualuser.lastName', requestBody.lastName);
+          console.log('Updated actualuser.lastName:', requestBody.lastName);
+        }
+        if (requestBody.username) {
+          bru.setEnvVar('actualuser.username', requestBody.username);
+          console.log('Updated actualuser.username:', requestBody.username);
+        }
+        if (requestBody.email) {
+          bru.setEnvVar('actualuser.email', requestBody.email);
+          console.log('Updated actualuser.email:', requestBody.email);
+        }
+        if (requestBody.companyName) {
+          bru.setEnvVar('actualuser.companyName', requestBody.companyName);
+          console.log('Updated actualuser.companyName:', requestBody.companyName);
+        }
+        if (requestBody.bio) {
+          bru.setEnvVar('actualuser.bio', requestBody.bio);
+          console.log('Updated actualuser.bio:', requestBody.bio);
+        }
+        if (requestBody.phone) {
+          bru.setEnvVar('actualuser.phone', requestBody.phone);
+          console.log('Updated actualuser.phone:', requestBody.phone);
+        }
+        if (requestBody.location) {
+          bru.setEnvVar('actualuser.location', requestBody.location);
+          console.log('Updated actualuser.location:', requestBody.location);
+        }
+        if (requestBody.website) {
+          bru.setEnvVar('actualuser.website', requestBody.website);
+          console.log('Updated actualuser.website:', requestBody.website);
+        }
+      }
+      
+      // If the response contains updated profile data, we could also use it
+      if (responseBody && responseBody.data) {
+        console.log('Updated profile data received:', JSON.stringify(responseBody.data, null, 2));
+      }
+      
+      // Set success flag for potential use in other requests
+      bru.setEnvVar('lastProfileUpdateSuccess', 'true');
+      bru.setEnvVar('lastProfileUpdateTime', new Date().toISOString());
+      
+    } else if (res.getStatus() === 400) {
+      console.error('❌ Bad Request - Invalid profile data provided');
+      if (responseBody && responseBody.error) {
+        console.error('Error details:', responseBody.error);
+      }
+      bru.setEnvVar('lastProfileUpdateSuccess', 'false');
+      
+    } else if (res.getStatus() === 401) {
+      console.error('❌ Unauthorized - Invalid or expired access token');
+      console.log('Please login again to get a fresh access token');
+      bru.setEnvVar('lastProfileUpdateSuccess', 'false');
+      
+    } else if (res.getStatus() === 403) {
+      console.error('❌ Forbidden - Insufficient permissions');
+      bru.setEnvVar('lastProfileUpdateSuccess', 'false');
+      
+    } else if (res.getStatus() === 409) {
+      console.error('❌ Conflict - Username or email already exists');
+      if (responseBody && responseBody.error) {
+        console.error('Conflict details:', responseBody.error);
+      }
+      bru.setEnvVar('lastProfileUpdateSuccess', 'false');
+      
+    } else if (res.getStatus() === 422) {
+      console.error('❌ Validation Error - Invalid input data');
+      if (responseBody && responseBody.errors) {
+        console.error('Validation errors:', JSON.stringify(responseBody.errors, null, 2));
+      }
+      bru.setEnvVar('lastProfileUpdateSuccess', 'false');
+      
+    } else if (res.getStatus() >= 500) {
+      console.error('❌ Server Error - Internal server error occurred');
+      if (responseBody && responseBody.error) {
+        console.error('Server error details:', responseBody.error);
+      }
+      bru.setEnvVar('lastProfileUpdateSuccess', 'false');
+      
+    } else {
+      console.warn('⚠️ Unexpected response status:', res.getStatus());
+      bru.setEnvVar('lastProfileUpdateSuccess', 'false');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing response:', error.message);
+    bru.setEnvVar('lastProfileUpdateSuccess', 'false');
+  }
+}
+
+tests {
+  // Test suite for Update Profile API
+  
+  test("Response status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Response should have success message", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('success');
+    expect(body.success).to.be.true;
+  });
+  
+  test("Response should contain data object", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('data');
+    expect(body.data).to.be.an('object');
+  });
+  
+  test("Response should have success message in data", function() {
+    const body = res.getBody();
+    expect(body.data).to.have.property('message');
+    expect(body.data.message).to.include('updated successfully');
+  });
+  
+  test("Response should include updated fields", function() {
+    const body = res.getBody();
+    expect(body.data).to.have.property('updatedFields');
+    expect(body.data.updatedFields).to.be.an('array');
+  });
+  
+  test("Content-Type should be application/json", function() {
+    expect(res.getHeaders()['content-type']).to.include('application/json');
+  });
+  
+  test("Response time should be reasonable", function() {
+    expect(res.getResponseTime()).to.be.below(5000);
+  });
+}
+
+docs {
+  # Update Profile API
+
+  This endpoint allows authenticated users to update their profile information.
+
+  ## Request Body
+
+  All fields are optional. Only provided fields will be updated:
+
+  - `firstName` (string): User's first name
+  - `lastName` (string): User's last name  
+  - `username` (string): Unique username (must be unique across platform)
+  - `email` (string): Email address (must be unique and valid)
+  - `companyName` (string): Company or organization name
+  - `bio` (string): User biography or description
+  - `phone` (string): Phone number
+  - `location` (string): Geographic location
+  - `website` (string): Personal or company website URL
+
+  ## Response
+
+  ### Success (200)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "message": "Profile updated successfully",
+      "updatedFields": ["first_name", "last_name", "bio"]
+    }
+  }
+  ```
+
+  ### Validation Error (422)
+  ```json
+  {
+    "success": false,
+    "error": "Validation failed",
+    "errors": {
+      "email": "Invalid email format",
+      "username": "Username must be at least 3 characters"
+    }
+  }
+  ```
+
+  ### Conflict (409)
+  ```json
+  {
+    "success": false,
+    "error": "Username or email already exists"
+  }
+  ```
+
+  ## Notes
+
+  - Authentication required via Bearer token
+  - Username and email must be unique across the platform
+  - Partial updates are supported - only send fields you want to change
+  - Profile picture uploads are handled by a separate endpoint
+}

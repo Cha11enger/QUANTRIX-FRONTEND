@@ -1,0 +1,369 @@
+meta {
+  name: Login
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+body:json {
+  {
+    "accountIdentifier": "{{actualuser.accountIdentifier}}",
+    "username": "{{actualuser.username}}",
+    "password": "{{actualuser.password}}"
+  }
+}
+
+script:pre-request {
+  // Pre-request script for Login API
+  console.log('🔐 Starting Login API request...');
+  
+  // Verify required credentials exist in environment
+  const requiredFields = ['username', 'password'];
+  const missingFields = [];
+  
+  requiredFields.forEach(field => {
+    const envKey = `actualuser.${field}`;
+    const value = bru.getEnvVar(envKey);
+    
+    if (!value) {
+      missingFields.push(field);
+      console.warn(`⚠️  Missing required field: ${envKey}`);
+    } else {
+      console.log(`✅ Found ${envKey}: ${field === 'password' ? '***' : value}`);
+    }
+  });
+  
+  // Set default values if missing (for testing purposes)
+  if (missingFields.length > 0) {
+    console.warn('🚨 Some required fields are missing. Setting defaults for testing...');
+    
+    const defaults = {
+      username: 'johndoe123',
+      password: 'SecurePass123@',
+      accountIdentifier: 'FVMOPWL-BFLRUT8N'
+    };
+    
+    missingFields.forEach(field => {
+      const envKey = `actualuser.${field}`;
+      bru.setEnvVar(envKey, defaults[field], { persist: true });
+      console.log(`🔧 Set default ${envKey}: ${field === 'password' ? '***' : defaults[field]}`);
+    });
+  }
+  
+  // Check for account identifier
+  const accountId = bru.getEnvVar('actualuser.accountIdentifier');
+  if (!accountId) {
+    console.warn('⚠️  No account identifier found, using default');
+    bru.setEnvVar('actualuser.accountIdentifier', 'FVMOPWL-BFLRUT8N', { persist: true });
+  }
+  
+  console.log('🔑 Login credentials prepared successfully');
+}
+
+script:post-response {
+  // Post-response script for Login API
+  console.log('📥 Processing Login API response...');
+  
+  try {
+    const responseData = res.getBody();
+    console.log('📊 Response status:', res.status);
+    
+    if (res.status === 200 && responseData.success) {
+      console.log('✅ Login successful!');
+      console.log('📊 Full response data:', JSON.stringify(responseData, null, 2));
+      
+      // Debug the response structure
+      console.log('🔍 Response data keys:', Object.keys(responseData));
+      if (responseData.data) {
+        console.log('🔍 Response data.data keys:', Object.keys(responseData.data));
+      }
+      
+      // Extract tokens and user data from API response
+      let accessToken, refreshToken, user;
+      
+      // The API returns 'token' (not 'accessToken') - map it correctly
+      if (responseData.data) {
+        accessToken = responseData.data.token || responseData.data.accessToken || responseData.data.access_token;
+        refreshToken = responseData.data.refreshToken || responseData.data.refresh_token;
+        user = responseData.data.user;
+      }
+      
+      // Fallback: Check if tokens are at root level
+      if (!accessToken) {
+        accessToken = responseData.token || responseData.accessToken || responseData.access_token;
+        refreshToken = responseData.refreshToken || responseData.refresh_token;
+        user = responseData.user;
+      }
+      
+      console.log('🔑 Extracted accessToken (from data.token):', accessToken ? 'Found (' + accessToken.substring(0, 20) + '...)' : 'NOT FOUND');
+      console.log('🔑 Extracted refreshToken (from data.refreshToken):', refreshToken ? 'Found (' + refreshToken.substring(0, 20) + '...)' : 'NOT FOUND');
+      console.log('👤 Extracted user (from data.user):', user ? 'Found' : 'NOT FOUND');
+      
+      // Store authentication tokens with validation
+      if (accessToken) {
+        bru.setEnvVar('actualuser.accessToken', accessToken, { persist: true });
+        console.log('💾 Successfully stored actualuser.accessToken');
+        
+        // Verify it was stored
+        const storedToken = bru.getEnvVar('actualuser.accessToken');
+        console.log('✅ Verification - actualuser.accessToken stored:', storedToken ? 'YES' : 'NO');
+        
+        // Try to parse JWT token expiry, fallback to 15 minutes if parsing fails
+        let expiryTime;
+        try {
+          // JWT tokens have 3 parts separated by dots
+          const tokenParts = accessToken.split('.');
+          if (tokenParts.length === 3) {
+            // Decode the payload (second part) - use Buffer for Node.js environment
+            let payload;
+            try {
+              // Try using Buffer (Node.js) first
+              payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+            } catch (bufferError) {
+              // Fallback to atob if Buffer is not available
+              if (typeof atob !== 'undefined') {
+                payload = JSON.parse(atob(tokenParts[1]));
+              } else {
+                throw new Error('No base64 decoder available');
+              }
+            }
+            if (payload.exp) {
+              // Convert Unix timestamp to ISO string
+              expiryTime = new Date(payload.exp * 1000).toISOString();
+              console.log('💾 Parsed JWT expiry from token:', expiryTime);
+            }
+          }
+        } catch (jwtError) {
+          console.warn('⚠️ Could not parse JWT expiry, using fallback:', jwtError.message);
+        }
+        
+        // Fallback: Calculate token expiry (15 minutes from now) if JWT parsing failed
+        if (!expiryTime) {
+          expiryTime = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+          console.log('💾 Using fallback expiry (15 minutes):', expiryTime);
+        }
+        
+        bru.setEnvVar('actualuser.tokenExpiry', expiryTime, { persist: true });
+        console.log('💾 Stored actualuser.tokenExpiry:', expiryTime);
+      } else {
+        console.error('❌ CRITICAL: No accessToken found in response!');
+        console.error('📊 Expected field: data.token (API returns "token", not "accessToken")');
+        console.error('📊 Please check API response structure');
+      }
+      
+      if (refreshToken) {
+        bru.setEnvVar('actualuser.refreshToken', refreshToken, { persist: true });
+        console.log('💾 Successfully stored actualuser.refreshToken');
+        
+        // Calculate refresh token expiry (7 days from now)
+        const refreshExpiryTime = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        bru.setEnvVar('actualuser.refreshTokenExpiry', refreshExpiryTime, { persist: true });
+        console.log('💾 Stored actualuser.refreshTokenExpiry:', refreshExpiryTime);
+      } else {
+        console.error('❌ WARNING: No refreshToken found in response!');
+      }
+      
+      // Update user profile information
+      if (user) {
+        if (user.id) {
+          bru.setEnvVar('actualuser.userId', user.id, { persist: true });
+          console.log('💾 Updated actualuser.userId:', user.id);
+        }
+        
+        if (user.username) {
+          bru.setEnvVar('actualuser.username', user.username, { persist: true });
+          console.log('💾 Updated actualuser.username:', user.username);
+        }
+        
+        if (user.email) {
+          bru.setEnvVar('actualuser.email', user.email, { persist: true });
+          console.log('💾 Updated actualuser.email:', user.email);
+        }
+        
+        if (user.fullName) {
+          bru.setEnvVar('actualuser.fullName', user.fullName, { persist: true });
+          console.log('💾 Updated actualuser.fullName:', user.fullName);
+        }
+        
+        if (user.accountIdentifier) {
+          bru.setEnvVar('actualuser.accountIdentifier', user.accountIdentifier, { persist: true });
+          console.log('💾 Updated actualuser.accountIdentifier:', user.accountIdentifier);
+        }
+        
+        if (user.currentRole) {
+          bru.setEnvVar('actualuser.currentRole', user.currentRole, { persist: true });
+          console.log('💾 Stored actualuser.currentRole:', user.currentRole);
+        }
+        
+        if (user.roles && Array.isArray(user.roles)) {
+          bru.setEnvVar('actualuser.roles', JSON.stringify(user.roles), { persist: true });
+          console.log('💾 Stored actualuser.roles:', user.roles);
+        }
+        
+        if (user.organizationName) {
+          bru.setEnvVar('actualuser.organizationName', user.organizationName, { persist: true });
+          console.log('💾 Stored actualuser.organizationName:', user.organizationName);
+        }
+        
+        if (user.companyName) {
+          bru.setEnvVar('actualuser.companyName', user.companyName, { persist: true });
+          console.log('💾 Updated actualuser.companyName:', user.companyName);
+        }
+      }
+      
+      // Set login status
+      bru.setEnvVar('actualuser.isLoggedIn', 'true', { persist: true });
+      bru.setEnvVar('actualuser.lastLoginTime', new Date().toISOString(), { persist: true });
+      
+      // Preserve the original password that was used for login
+      const originalPassword = bru.getEnvVar('actualuser.password');
+      
+      if (originalPassword) {
+        bru.setEnvVar('actualuser.password', originalPassword, { persist: true });
+        bru.setEnvVar('actualuser.confirmPassword', originalPassword, { persist: true });
+        console.log('💾 Preserved actualuser.password and actualuser.confirmPassword');
+      }
+      
+      console.log('🎉 Login tokens and user data stored successfully in environment variables');
+      
+    } else if (res.status === 401) {
+      console.error('❌ Login failed: Invalid credentials');
+      console.error('📄 Error response:', responseData);
+      
+      // Clear any existing tokens on failed login
+      bru.setEnvVar('actualuser.accessToken', '', { persist: true });
+      bru.setEnvVar('actualuser.refreshToken', '', { persist: true });
+      bru.setEnvVar('actualuser.isLoggedIn', 'false', { persist: true });
+      
+    } else if (res.status === 403) {
+      console.error('❌ Login failed: Account not verified');
+      console.error('📄 Error response:', responseData);
+      
+      // Store verification status
+      bru.setEnvVar('actualuser.isVerified', 'false', { persist: true });
+      
+    } else if (res.status >= 400) {
+      console.error('❌ Login failed with status:', res.status);
+      console.error('📄 Error response:', responseData);
+      
+      // Log specific error details
+      if (responseData.error) {
+        console.error('🚨 Error message:', responseData.error);
+      }
+      
+      if (responseData.details && responseData.details.errors) {
+        console.error('📝 Validation errors:', responseData.details.errors);
+      }
+      
+      // Clear tokens on any error
+      bru.setEnvVar('actualuser.isLoggedIn', 'false', { persist: true });
+    }
+    
+  } catch (error) {
+    console.error('💥 Error processing login response:', error.message);
+    console.error('📄 Raw response:', res.body);
+    
+    // Clear login status on error
+    bru.setEnvVar('actualuser.isLoggedIn', 'false', { persist: true });
+  }
+  
+  console.log('🏁 Login API response processing completed');
+}
+
+docs {
+  # User Login
+  
+  This endpoint authenticates a user and returns access and refresh tokens. The user must provide their account identifier, username, and password to log in.
+  
+  ## Request Body
+  
+  All fields are required:
+  
+  - **accountIdentifier** (string, required): The account identifier in format XXXXXXX-XXXXXXXX
+  - **username** (string, required): The user's username (3-30 characters, alphanumeric)
+  - **password** (string, required): The user's password
+  
+  ## Authentication Flow
+  
+  1. User provides account identifier, username, and password
+  2. System validates credentials against the database
+  3. If valid, generates JWT access token and refresh token
+  4. Returns tokens along with user profile information
+  5. Access token expires in 15 minutes, refresh token in 7 days
+  
+  ## Success Response (200)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "user": {
+        "id": "uuid",
+        "username": "johndoe123",
+        "email": "john.doe@example.com",
+        "fullName": "John Doe",
+        "accountIdentifier": "FVMOPWL-BFLRUT8N",
+        "currentRole": "ACCOUNTADMIN",
+        "roles": ["ACCOUNTADMIN", "DATAENGINEER", "DATAANALYST", "VIEWER"],
+        "organizationName": "Generated Org Name",
+        "companyName": "Acme Corporation"
+      }
+    },
+    "message": "Login successful",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  ## Error Responses
+  
+  **400 Bad Request** - Validation errors:
+  ```json
+  {
+    "success": false,
+    "error": "Validation error message",
+    "details": {
+      "errors": ["Specific validation errors"]
+    },
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **401 Unauthorized** - Invalid credentials:
+  ```json
+  {
+    "success": false,
+    "error": "Invalid credentials",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **403 Forbidden** - Account not verified:
+  ```json
+  {
+    "success": false,
+    "error": "Account not verified. Please verify your account first.",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **429 Too Many Requests** - Rate limit exceeded
+  **500 Internal Server Error** - Server error
+  
+  ## Token Usage
+  
+  After successful login, use the `accessToken` in the Authorization header for protected endpoints:
+  ```
+  Authorization: Bearer <accessToken>
+  ```
+}

@@ -1,0 +1,151 @@
+meta {
+  name: Liveness Check
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health/liveness
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+script:pre-request {
+  // Pre-request script for Liveness Check API
+  // Used for Kubernetes liveness probes
+  
+  console.log('=== Liveness Check Pre-Request Script ===');
+  
+  // Set liveness check timestamp
+  const currentTime = new Date().toISOString();
+  bru.setEnvVar('healthcheck.liveness.lastAttempt', currentTime);
+  
+  // Log liveness check initiation
+  console.log('Initiating Kubernetes liveness probe...');
+  console.log('Timestamp:', currentTime);
+  
+  console.log('Pre-request setup completed.');
+}
+
+script:post-response {
+  // Post-response script for Liveness Check API
+  // Logs liveness status for Kubernetes orchestration
+  
+  console.log('=== Liveness Check Post-Response Script ===');
+  
+  const currentTime = new Date().toISOString();
+  
+  // Check response status and handle accordingly
+  if (res.status === 200) {
+    const responseBody = res.getBody();
+    console.log('✅ Liveness check successful');
+    
+    if (responseBody && responseBody.success && responseBody.data) {
+      const data = responseBody.data;
+      
+      // Store liveness information
+      bru.setEnvVar('healthcheck.liveness.lastSuccess', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.liveness.status', data.status || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.liveness.version', data.version || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.liveness.environment', data.environment || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.liveness.uptime', data.uptime?.toString() || '0', {persist: true});
+      
+      // Clear any previous failure information
+      bru.setEnvVar('healthcheck.liveness.lastFailure', '', {persist: true});
+      bru.setEnvVar('healthcheck.liveness.failureReason', '', {persist: true});
+      
+      console.log('✅ Liveness information updated:');
+      console.log('- Status:', data.status);
+      console.log('- Version:', data.version);
+      console.log('- Environment:', data.environment);
+      console.log('- Uptime:', data.uptime);
+      
+      // Preserve authentication environment variables
+      const preserveAuthVars = [
+        'refreshToken', 'accessToken', 'username', 'email', 'accountIdentifier',
+        'password', 'confirmPassword', 'firstName', 'lastName', 'companyName',
+        'organizationName', 'tokenExpiry', 'refreshTokenExpiry', 'userId',
+        'isLoggedIn', 'lastLoginTime', 'isVerified', 'lastVerificationTime'
+      ];
+      
+      preserveAuthVars.forEach(varName => {
+        const value = bru.getEnvVar(varName);
+        if (value) {
+          bru.setEnvVar(varName, value, {persist: true});
+        }
+      });
+      
+    } else {
+      console.log('⚠️ Unexpected response format');
+      bru.setEnvVar('healthcheck.liveness.lastFailure', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.liveness.failureReason', 'Unexpected response format', {persist: true});
+    }
+    
+  } else {
+    console.log(`❌ Liveness check failed with status: ${res.status}`);
+    bru.setEnvVar('healthcheck.liveness.lastFailure', currentTime, {persist: true});
+    bru.setEnvVar('healthcheck.liveness.failureReason', `HTTP ${res.status}`, {persist: true});
+    bru.setEnvVar('healthcheck.liveness.status', 'NOT_ALIVE', {persist: true});
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+docs {
+  # Liveness Check API
+  
+  ## Overview
+  This endpoint is designed for Kubernetes liveness probes to determine if the application is running and should be restarted if unhealthy.
+  
+  ## Endpoint
+  `GET /api/v1/health/liveness`
+  
+  ## Response Format
+  
+  **200 OK** - Application is alive
+  ```json
+  {
+    "success": true,
+    "data": {
+      "status": "ALIVE|NOT_ALIVE",
+      "timestamp": "2025-11-01T07:49:00.278Z",
+      "uptime": 48.4245417,
+      "version": "0.0.0",
+      "environment": "development"
+    },
+    "timestamp": "2025-11-01T07:49:00.278Z"
+  }
+  ```
+  
+  ## Kubernetes Integration
+  
+  Use this endpoint in your Kubernetes deployment:
+  
+  ```yaml
+  livenessProbe:
+    httpGet:
+      path: /api/v1/health/liveness
+      port: 5000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  ```
+  
+  ## Use Cases
+  - Kubernetes liveness probes
+  - Container orchestration health checks
+  - Automatic restart triggers
+  - Application deadlock detection
+  
+  ## Environment Variables Set
+  - `healthcheck.liveness.lastSuccess` - Last successful check timestamp
+  - `healthcheck.liveness.status` - Current liveness status
+  - `healthcheck.liveness.version` - Application version
+  - `healthcheck.liveness.uptime` - Application uptime in seconds
+}

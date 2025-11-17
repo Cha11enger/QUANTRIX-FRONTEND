@@ -1,0 +1,228 @@
+meta {
+  name: Register
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/auth/register
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+body:json {
+  {
+    "firstName": "{{actualuser.firstName}}",
+    "lastName": "{{actualuser.lastName}}",
+    "username": "{{actualuser.username}}",
+    "email": "{{actualuser.email}}",
+    "password": "{{actualuser.password}}",
+    "confirmPassword": "{{actualuser.password}}",
+    "companyName": "{{actualuser.companyName}}"
+  }
+}
+
+script:pre-request {
+  // Pre-request script for Register API
+  console.log('🚀 Starting Register API request...');
+  
+  // Set default values if environment variables don't exist
+  const defaultValues = {
+    firstName: 'John',
+    lastName: 'Doe', 
+    username: 'johndoe123',
+    email: 'john.doe@example.com',
+    password: 'SecurePass123@',
+    companyName: 'Acme Corporation'
+  };
+  
+  // Check and set default values for missing environment variables
+  Object.keys(defaultValues).forEach(key => {
+    const envKey = `actualuser.${key}`;
+    if (!bru.getEnvVar(envKey)) {
+      console.log(`⚠️  Setting default value for ${envKey}: ${defaultValues[key]}`);
+      bru.setEnvVar(envKey, defaultValues[key], { persist: true });
+    } else {
+      console.log(`✅ Using existing value for ${envKey}: ${bru.getEnvVar(envKey)}`);
+    }
+  });
+  
+  console.log('📋 Registration data prepared successfully');
+}
+
+script:post-response {
+  // Post-response script for Register API
+  console.log('📥 Processing Register API response...');
+  
+  try {
+    const responseData = res.getBody();
+    console.log('📊 Response status:', res.status);
+    
+    if (res.status === 201 && responseData.success) {
+      console.log('✅ Registration successful!');
+      
+      // Extract and store user details from successful registration
+      const userData = responseData.data;
+      
+      // Store registered user details in environment variables
+      if (userData.email) {
+        bru.setEnvVar('actualuser.email', userData.email, { persist: true });
+        console.log('💾 Stored actualuser.email:', userData.email);
+      }
+      
+      if (userData.userId) {
+        bru.setEnvVar('actualuser.userId', userData.userId, { persist: true });
+        console.log('💾 Stored actualuser.userId:', userData.userId);
+      }
+      
+      if (userData.username) {
+        bru.setEnvVar('actualuser.username', userData.username, { persist: true });
+        console.log('💾 Stored actualuser.username:', userData.username);
+      }
+      
+      if (userData.fullName) {
+        bru.setEnvVar('actualuser.fullName', userData.fullName, { persist: true });
+        console.log('💾 Stored actualuser.fullName:', userData.fullName);
+      }
+      
+      if (userData.accountIdentifier) {
+        bru.setEnvVar('actualuser.accountIdentifier', userData.accountIdentifier, { persist: true });
+        console.log('💾 Stored actualuser.accountIdentifier:', userData.accountIdentifier);
+      }
+      
+      if (userData.companyName) {
+        bru.setEnvVar('actualuser.companyName', userData.companyName, { persist: true });
+        console.log('💾 Stored actualuser.companyName:', userData.companyName);
+      }
+      
+      // Store the password used for registration (for login purposes)
+      const registeredPassword = bru.getEnvVar('actualuser.password');
+      if (registeredPassword) {
+        bru.setEnvVar('actualuser.password', registeredPassword, { persist: true });
+        console.log('💾 Stored actualuser.password for future login');
+      }
+      
+      // Preserve the original firstName and lastName that were sent in the request
+      const originalFirstName = bru.getEnvVar('actualuser.firstName');
+      const originalLastName = bru.getEnvVar('actualuser.lastName');
+      
+      if (originalFirstName) {
+        bru.setEnvVar('actualuser.firstName', originalFirstName, { persist: true });
+        console.log('💾 Preserved actualuser.firstName:', originalFirstName);
+      }
+      
+      if (originalLastName) {
+        bru.setEnvVar('actualuser.lastName', originalLastName, { persist: true });
+        console.log('💾 Preserved actualuser.lastName:', originalLastName);
+      }
+      
+      // If response includes a token, store it
+      if (responseData.token) {
+        bru.setEnvVar('actualuser.token', responseData.token, { persist: true });
+        console.log('💾 Stored actualuser.token:', responseData.token);
+      }
+      
+      console.log('🎉 User registration data stored successfully in environment variables');
+      
+    } else if (res.status >= 400) {
+      console.error('❌ Registration failed with status:', res.status);
+      console.error('📄 Error response:', responseData);
+      
+      // Log specific error details
+      if (responseData.error) {
+        console.error('🚨 Error message:', responseData.error);
+      }
+      
+      if (responseData.details && responseData.details.errors) {
+        console.error('📝 Validation errors:', responseData.details.errors);
+      }
+    }
+    
+  } catch (error) {
+    console.error('💥 Error processing registration response:', error.message);
+    console.error('📄 Raw response:', res.body);
+  }
+  
+  console.log('🏁 Register API response processing completed');
+}
+
+docs {
+  # User Registration
+  
+  This endpoint allows new users to register for an account. The system will create a new user account with the provided information and automatically assign default roles.
+  
+  ## Request Body
+  
+  All fields except `companyName` are required:
+  
+  - **firstName** (string, required): 2-50 characters, letters and spaces only
+  - **lastName** (string, required): 2-50 characters, letters and spaces only  
+  - **username** (string, required): 3-30 characters, alphanumeric only
+  - **email** (string, required): Valid email address format
+  - **password** (string, required): Minimum 8 characters with at least:
+    - One uppercase letter
+    - One lowercase letter
+    - One number
+    - One special character (@$!%*?&)
+  - **confirmPassword** (string, required): Must match password exactly
+  - **companyName** (string, optional): 2-100 characters
+  
+  ## Default Role Assignment
+  
+  New users are automatically assigned these default roles:
+  - **ACCOUNTADMIN** (set as current active role)
+  - **DATAENGINEER**
+  - **DATAANALYST**
+  - **VIEWER**
+  
+  ## Success Response (201)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "userId": "uuid",
+      "username": "johndoe123",
+      "email": "john.doe@example.com",
+      "fullName": "John Doe",
+      "accountIdentifier": "XXXXXXX-XXXXXXXX",
+      "dataSharingIdentifier": "XXXXXXX.XXXXXXXX",
+      "organizationName": "Generated Org Name",
+      "accountName": "XXXXXXXX",
+      "companyName": "Acme Corporation"
+    },
+    "message": "User registered successfully",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  ## Error Responses
+  
+  **400 Bad Request** - Validation errors:
+  ```json
+  {
+    "success": false,
+    "error": "Validation error message",
+    "details": {
+      "errors": ["Specific validation errors"]
+    },
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **409 Conflict** - User already exists:
+  ```json
+  {
+    "success": false,
+    "error": "User with this email or username already exists",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **429 Too Many Requests** - Rate limit exceeded
+  **500 Internal Server Error** - Server error
+}

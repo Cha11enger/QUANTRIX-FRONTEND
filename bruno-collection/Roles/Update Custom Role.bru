@@ -1,0 +1,101 @@
+meta {
+  name: Update Custom Role
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/{{apiVersion}}/roles/custom?by={{updateRoleBy}}&value={{updateRoleValue}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{actualuser.accessToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "{{updateRoleName}}",
+    "description": "{{updateRoleDescription}}"
+    ,
+    "is_active": {{updateRoleIsActive}}
+  }
+}
+
+script:pre-request {
+  const accessToken = bru.getEnvVar('actualuser.accessToken');
+  if (!accessToken) { throw new Error('Access token is required. Please login first.'); }
+
+  if (!bru.getEnvVar('updateRoleBy')) { bru.setEnvVar('updateRoleBy', 'name'); }
+  if (!bru.getEnvVar('updateRoleValue')) { throw new Error('updateRoleValue is required. Please set the role identifier value.'); }
+
+  let updateName = bru.getEnvVar('updateRoleName');
+  if (!updateName) { updateName = bru.getEnvVar('updateRoleValue') + '_UPDATED'; bru.setEnvVar('updateRoleName', updateName); }
+
+  let updateDesc = bru.getEnvVar('updateRoleDescription');
+  if (updateDesc === undefined || updateDesc === null) { updateDesc = ''; bru.setEnvVar('updateRoleDescription', updateDesc); }
+  let updateIsActive = bru.getEnvVar('updateRoleIsActive');
+  if (typeof updateIsActive === 'undefined' || updateIsActive === null) { updateIsActive = true; bru.setEnvVar('updateRoleIsActive', updateIsActive); }
+  const requestBody = req.getBody();
+  console.log('♻️ UpdateRole - is_active env', updateIsActive);
+  console.log('♻️ UpdateRole - request body', requestBody);
+}
+
+script:post-response {
+  bru.setEnvVar('lastUpdateRoleResponse', JSON.stringify(res.getBody()), { persist: true });
+  bru.setEnvVar('lastUpdateRoleStatus', res.getStatus().toString(), { persist: true });
+
+  const status = res.getStatus();
+  if (status === 200) {
+    const responseData = res.getBody();
+    if (responseData && responseData.success && responseData.data) {
+      const roleData = responseData.data;
+      bru.setEnvVar('lastUpdatedRole.id', String(roleData.id), { persist: true });
+      bru.setEnvVar('lastUpdatedRole.name', roleData.name, { persist: true });
+      bru.setEnvVar('lastUpdatedRole.description', roleData.description, { persist: true });
+      bru.setEnvVar('lastUpdatedRole.isCustom', roleData.is_active ? 'true' : 'false', { persist: true });
+      bru.setEnvVar('lastRoleUpdateSuccess', 'true', { persist: true });
+    } else {
+      bru.setEnvVar('lastRoleUpdateSuccess', 'false', { persist: true });
+    }
+  } else {
+    bru.setEnvVar('lastRoleUpdateSuccess', 'false', { persist: true });
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("Response has success property", function() {
+    expect(res.getBody()).to.have.property('success');
+  });
+  test("Response has data property", function() {
+    expect(res.getBody()).to.have.property('data');
+  });
+  test("Data contains role object directly", function() {
+    const data = res.getBody().data;
+    expect(data).to.be.an('object');
+    expect(data).to.have.property('id');
+    expect(data).to.have.property('name');
+    expect(data).to.have.property('description');
+    expect(data).to.have.property('is_active');
+    expect(data).to.have.property('permissions');
+  });
+  test("Role has required properties", function() {
+    const role = res.getBody().data;
+    expect(role).to.have.property('id');
+    expect(role).to.have.property('name');
+    expect(role).to.have.property('description');
+    expect(role).to.have.property('is_active');
+    expect(role).to.have.property('permissions');
+  });
+  test("Role is custom (active)", function() {
+    expect(res.getBody().data.is_active).to.equal(true);
+  });
+  test("Role has permissions array", function() {
+    expect(res.getBody().data.permissions).to.be.an('array');
+  });
+}

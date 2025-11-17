@@ -1,0 +1,240 @@
+meta {
+  name: Logout
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/auth/logout
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+body:json {
+  {
+    "refreshToken": "{{actualuser.refreshToken}}"
+  }
+}
+
+script:pre-request {
+  // Pre-request script for Logout API
+  // Validates that refresh token exists before logout attempt
+  
+  console.log('=== Logout Pre-Request Script ===');
+  
+  // Check if refresh token exists
+  const refreshToken = bru.getEnvVar('actualuser.refreshToken');
+  if (!refreshToken || refreshToken === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...') {
+    console.warn('Warning: No valid refresh token found for logout.');
+    console.log('Setting default refresh token placeholder for testing...');
+    bru.setEnvVar('actualuser.refreshToken', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+  } else {
+    console.log('Refresh token found, proceeding with logout...');
+  }
+  
+  // Log current user session info before logout
+  const username = bru.getEnvVar('actualuser.username');
+  const email = bru.getEnvVar('actualuser.email');
+  const userId = bru.getEnvVar('actualuser.userId');
+  
+  if (username || email || userId) {
+    console.log('Current user session:');
+    if (username) console.log('- Username:', username);
+    if (email) console.log('- Email:', email);
+    if (userId) console.log('- User ID:', userId);
+  }
+  
+  console.log('Preparing to logout and clear all session data...');
+  console.log('Pre-request validation completed.');
+}
+
+script:post-response {
+  // Post-response script for Logout API
+  // Clears all authentication tokens and user data from environment
+  
+  console.log('=== Logout Post-Response Script ===');
+  console.log('Response Status:', res.status);
+  
+  try {
+    if (res.status === 200) {
+      const responseBody = res.getBody();
+      console.log('Logout successful');
+      
+      // Clear all authentication tokens
+      bru.setEnvVar('actualuser.accessToken', '', {persist: true});
+      bru.setEnvVar('actualuser.refreshToken', '', {persist: true});
+      bru.setEnvVar('actualuser.accessTokenExpiry', '', {persist: true});
+      bru.setEnvVar('actualuser.refreshTokenExpiry', '', {persist: true});
+      bru.setEnvVar('actualuser.lastTokenRefresh', '', {persist: true});
+      
+      // Clear user profile information
+      bru.setEnvVar('actualuser.userId', '', {persist: true});
+      bru.setEnvVar('actualuser.username', '', {persist: true});
+      bru.setEnvVar('actualuser.email', '', {persist: true});
+      bru.setEnvVar('actualuser.firstName', '', {persist: true});
+      bru.setEnvVar('actualuser.lastName', '', {persist: true});
+      bru.setEnvVar('actualuser.fullName', '', {persist: true});
+      bru.setEnvVar('actualuser.accountIdentifier', '', {persist: true});
+      bru.setEnvVar('actualuser.dataSharingIdentifier', '', {persist: true});
+      bru.setEnvVar('actualuser.currentRole', '', {persist: true});
+      bru.setEnvVar('actualuser.roles', '', {persist: true});
+      bru.setEnvVar('actualuser.organizationName', '', {persist: true});
+      bru.setEnvVar('actualuser.accountName', '', {persist: true});
+      bru.setEnvVar('actualuser.companyName', '', {persist: true});
+      bru.setEnvVar('actualuser.isVerified', '', {persist: true});
+      bru.setEnvVar('actualuser.profileLastUpdated', '', {persist: true});
+      
+      // Clear password (if stored)
+      bru.setEnvVar('actualuser.password', '', {persist: true});
+      
+      // Set logout timestamp
+      bru.setEnvVar('actualuser.lastLogout', new Date().toISOString(), {persist: true});
+      
+      console.log('✅ Logout completed successfully');
+      console.log('✅ All authentication tokens cleared from environment');
+      console.log('✅ All user profile data cleared from environment');
+      console.log('✅ Session cleanup completed');
+      
+      if (responseBody && responseBody.success) {
+        console.log('Server response:', responseBody.message || 'Logout successful');
+      }
+      
+    } else if (res.status === 400) {
+      console.error('❌ Bad request - Refresh token missing or invalid format');
+      console.log('Clearing tokens anyway for security...');
+      
+      // Clear tokens even on bad request for security
+      bru.setEnvVar('actualuser.accessToken', '', {persist: true});
+      bru.setEnvVar('actualuser.refreshToken', '', {persist: true});
+      
+    } else if (res.status === 401) {
+      console.error('❌ Unauthorized - Invalid refresh token');
+      console.log('Token was already invalid, clearing from environment...');
+      
+      // Clear invalid tokens
+      bru.setEnvVar('actualuser.accessToken', '', {persist: true});
+      bru.setEnvVar('actualuser.refreshToken', '', {persist: true});
+      bru.setEnvVar('actualuser.accessTokenExpiry', '', {persist: true});
+      bru.setEnvVar('actualuser.refreshTokenExpiry', '', {persist: true});
+      
+    } else if (res.status === 403) {
+      console.error('❌ Forbidden - Token already revoked');
+      console.log('Token was already blacklisted, clearing from environment...');
+      
+      // Clear already revoked tokens
+      bru.setEnvVar('actualuser.accessToken', '', {persist: true});
+      bru.setEnvVar('actualuser.refreshToken', '', {persist: true});
+      bru.setEnvVar('actualuser.accessTokenExpiry', '', {persist: true});
+      bru.setEnvVar('actualuser.refreshTokenExpiry', '', {persist: true});
+      
+    } else if (res.status === 429) {
+      console.error('❌ Rate limit exceeded - Too many logout requests');
+      
+    } else if (res.status >= 500) {
+      console.error('❌ Server error occurred during logout');
+      console.log('Server error, but clearing tokens locally for security...');
+      
+      // Clear tokens locally even if server error occurred
+      bru.setEnvVar('actualuser.accessToken', '', {persist: true});
+      bru.setEnvVar('actualuser.refreshToken', '', {persist: true});
+      
+    } else {
+      console.error('❌ Unexpected response status:', res.status);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing logout response:', error.message);
+    console.log('Error occurred, but clearing tokens for security...');
+    
+    // Clear tokens even if error occurred for security
+    bru.setEnvVar('actualuser.accessToken', '', {persist: true});
+    bru.setEnvVar('actualuser.refreshToken', '', {persist: true});
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+docs {
+  # User Logout
+  
+  This endpoint logs out a user by invalidating their refresh token. Once logged out, the user's refresh token will be blacklisted and cannot be used to generate new access tokens.
+  
+  ## Request Body
+  
+  - **refreshToken** (string, required): The user's refresh token to be invalidated
+    - Must be a valid JWT token
+    - Token will be added to blacklist after successful logout
+  
+  ## Logout Process
+  
+  1. User provides their refresh token
+  2. System validates the refresh token
+  3. If valid, adds the token to the blacklist
+  4. Invalidates the user's session
+  5. Returns success confirmation
+  6. User must log in again to access protected resources
+  
+  ## Security Notes
+  
+  - After logout, both access and refresh tokens become invalid
+  - The refresh token is permanently blacklisted
+  - Any subsequent requests with the blacklisted token will be rejected
+  - Users should clear local storage/cookies containing tokens
+  
+  ## Success Response (200)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "message": "Logged out successfully"
+    },
+    "message": "Logout successful",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  ## Error Responses
+  
+  **400 Bad Request** - Missing refresh token:
+  ```json
+  {
+    "success": false,
+    "error": "Refresh token is required",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **401 Unauthorized** - Invalid refresh token:
+  ```json
+  {
+    "success": false,
+    "error": "Invalid refresh token",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **403 Forbidden** - Already blacklisted token:
+  ```json
+  {
+    "success": false,
+    "error": "Token has already been revoked",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **429 Too Many Requests** - Rate limit exceeded
+  **500 Internal Server Error** - Server error
+  
+  ## Post-Logout Actions
+  
+  After successful logout:
+  1. Clear all stored tokens from client-side storage
+  2. Redirect user to login page
+  3. Remove any cached user data
+  4. Clear any session-related cookies
+}

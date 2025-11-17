@@ -1,0 +1,280 @@
+meta {
+  name: Verify Account
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/auth/verify-account
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+body:json {
+  {
+    "accountIdentifier": "{{actualuser.accountIdentifier}}"
+  }
+}
+
+script:pre-request {
+  // Pre-request script for Verify Account API
+  console.log('✅ Starting Account Verification request...');
+  
+  // Check if account identifier exists in environment
+  const accountId = bru.getEnvVar('actualuser.accountIdentifier');
+  
+  if (!accountId) {
+    console.warn('⚠️  No account identifier found in environment variables');
+    console.warn('🔧 Setting default account identifier for testing...');
+    
+    const defaultAccountId = 'FVMOPWL-BFLRUT8N';
+    bru.setEnvVar('actualuser.accountIdentifier', defaultAccountId, { persist: true });
+    console.log('💾 Set default actualuser.accountIdentifier:', defaultAccountId);
+  } else {
+    console.log('✅ Using account identifier from environment:', accountId);
+    
+    // Validate account identifier format
+    const accountIdPattern = /^[A-Z0-9]{7}-[A-Z0-9]{8}$/;
+    if (!accountIdPattern.test(accountId)) {
+      console.warn('⚠️  Account identifier format may be invalid:', accountId);
+      console.warn('📋 Expected format: XXXXXXX-XXXXXXXX (7 chars + hyphen + 8 chars)');
+    } else {
+      console.log('✅ Account identifier format is valid');
+    }
+  }
+  
+  // Check if user email exists (for reference)
+  const userEmail = bru.getEnvVar('actualuser.email');
+  if (userEmail) {
+    console.log('📧 Verifying account for email:', userEmail);
+  }
+  
+  console.log('🔍 Account verification request prepared successfully');
+}
+
+script:post-response {
+  // Post-response script for Verify Account API
+  console.log('📥 Processing Account Verification response...');
+  
+  try {
+    const responseData = res.getBody();
+    console.log('📊 Response status:', res.status);
+    
+    if (res.status === 200 && responseData.success) {
+      console.log('✅ Account verification successful!');
+      
+      const verificationData = responseData.data;
+      
+      // Store verification status and details
+      bru.setEnvVar('actualuser.isVerified', 'true', { persist: true });
+      console.log('💾 Stored actualuser.isVerified: true');
+      
+      if (verificationData.accountStatus) {
+        bru.setEnvVar('actualuser.accountStatus', verificationData.accountStatus, { persist: true });
+        console.log('💾 Stored actualuser.accountStatus:', verificationData.accountStatus);
+      }
+      
+      if (verificationData.verifiedAt) {
+        bru.setEnvVar('actualuser.verifiedAt', verificationData.verifiedAt, { persist: true });
+        console.log('💾 Stored actualuser.verifiedAt:', verificationData.verifiedAt);
+      }
+      
+      // Update last verification time
+      bru.setEnvVar('actualuser.lastVerificationTime', new Date().toISOString(), { persist: true });
+      
+      // Preserve original environment variables that were used/available before verification
+      const preserveVars = [
+        'accountIdentifier',
+        'refreshToken',
+        'accessToken',
+        'tokenExpiry', 
+        'refreshTokenExpiry',
+        'username',
+        'email',
+        'companyName',
+        'firstName',
+        'lastName',
+        'password',
+        'confirmPassword',
+        'userId',
+        'isLoggedIn',
+        'lastLoginTime'
+      ];
+
+      preserveVars.forEach(varName => {
+        const envKey = `actualuser.${varName}`;
+        const originalValue = bru.getEnvVar(envKey);
+        
+        if (originalValue) {
+          bru.setEnvVar(envKey, originalValue, { persist: true });
+          // Mask sensitive values in logs
+          const isSensitive = varName.includes('Token') || varName.includes('password') || varName === 'accessToken';
+          console.log(`💾 Preserved ${envKey}:`, isSensitive ? '***' : originalValue);
+        }
+      });
+      
+      console.log('🎉 Account verification completed successfully!');
+      console.log('💡 You can now proceed with login using the stored credentials');
+      
+    } else if (res.status === 400) {
+      console.error('❌ Account verification failed: Invalid account identifier format');
+      console.error('📄 Error response:', responseData);
+      
+      // Store verification failure status
+      bru.setEnvVar('actualuser.isVerified', 'false', { persist: true });
+      bru.setEnvVar('actualuser.verificationError', 'Invalid account identifier format', { persist: true });
+      
+      if (responseData.details && responseData.details.errors) {
+        console.error('📝 Validation errors:', responseData.details.errors);
+      }
+      
+    } else if (res.status === 404) {
+      console.error('❌ Account verification failed: Account not found');
+      console.error('📄 Error response:', responseData);
+      
+      // Store verification failure status
+      bru.setEnvVar('actualuser.isVerified', 'false', { persist: true });
+      bru.setEnvVar('actualuser.verificationError', 'Account not found', { persist: true });
+      
+      console.warn('💡 Please check if the account identifier is correct or if registration was completed');
+      
+    } else if (res.status === 409) {
+      console.log('ℹ️  Account is already verified');
+      console.log('📄 Response:', responseData);
+      
+      // Store verification status (already verified)
+      bru.setEnvVar('actualuser.isVerified', 'true', { persist: true });
+      bru.setEnvVar('actualuser.accountStatus', 'verified', { persist: true });
+      
+      // Preserve original environment variables that were used/available before verification
+      const preserveVars = [
+        'accountIdentifier',
+        'refreshToken',
+        'accessToken',
+        'tokenExpiry', 
+        'refreshTokenExpiry',
+        'username',
+        'email',
+        'companyName',
+        'firstName',
+        'lastName',
+        'password',
+        'confirmPassword',
+        'userId',
+        'isLoggedIn',
+        'lastLoginTime'
+      ];
+
+      preserveVars.forEach(varName => {
+        const envKey = `actualuser.${varName}`;
+        const originalValue = bru.getEnvVar(envKey);
+        
+        if (originalValue) {
+          bru.setEnvVar(envKey, originalValue, { persist: true });
+          // Mask sensitive values in logs
+          const isSensitive = varName.includes('Token') || varName.includes('password') || varName === 'accessToken';
+          console.log(`💾 Preserved ${envKey}:`, isSensitive ? '***' : originalValue);
+        }
+      });
+      
+      console.log('💡 Account was previously verified, you can proceed with login');
+      
+    } else if (res.status >= 400) {
+      console.error('❌ Account verification failed with status:', res.status);
+      console.error('📄 Error response:', responseData);
+      
+      // Store verification failure status
+      bru.setEnvVar('actualuser.isVerified', 'false', { persist: true });
+      
+      if (responseData.error) {
+        console.error('🚨 Error message:', responseData.error);
+        bru.setEnvVar('actualuser.verificationError', responseData.error, { persist: true });
+      }
+    }
+    
+  } catch (error) {
+    console.error('💥 Error processing account verification response:', error.message);
+    console.error('📄 Raw response:', res.body);
+    
+    // Store verification failure status on error
+    bru.setEnvVar('actualuser.isVerified', 'false', { persist: true });
+    bru.setEnvVar('actualuser.verificationError', 'Response processing error', { persist: true });
+  }
+  
+  console.log('🏁 Account verification response processing completed');
+}
+
+docs {
+  # Verify Account
+  
+  This endpoint verifies a user account using the account identifier provided during registration. Account verification is required before users can access protected resources.
+  
+  ## Request Body
+  
+  - **accountIdentifier** (string, required): The account identifier in format XXXXXXX-XXXXXXXX
+    - Must be exactly 16 characters with a hyphen at position 8
+    - Contains uppercase letters and numbers only
+    - Example: "FVMOPWL-BFLRUT8N"
+  
+  ## Account Identifier Format
+  
+  The account identifier follows this pattern:
+  - 7 characters + hyphen + 8 characters
+  - Uses uppercase letters (A-Z) and numbers (0-9)
+  - Generated automatically during registration
+  - Used for account verification and login
+  
+  ## Success Response (200)
+  ```json
+  {
+    "success": true,
+    "data": {
+      "message": "Account verified successfully",
+      "accountStatus": "verified",
+      "verifiedAt": "2025-01-01T00:00:00.000Z"
+    },
+    "message": "Account verification successful",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  ## Error Responses
+  
+  **400 Bad Request** - Invalid account identifier format:
+  ```json
+  {
+    "success": false,
+    "error": "Invalid account identifier format",
+    "details": {
+      "errors": ["Account identifier must be in format XXXXXXX-XXXXXXXX"]
+    },
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **404 Not Found** - Account not found:
+  ```json
+  {
+    "success": false,
+    "error": "Account not found",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **409 Conflict** - Account already verified:
+  ```json
+  {
+    "success": false,
+    "error": "Account is already verified",
+    "timestamp": "2025-01-01T00:00:00.000Z"
+  }
+  ```
+  
+  **429 Too Many Requests** - Rate limit exceeded
+  **500 Internal Server Error** - Server error
+}

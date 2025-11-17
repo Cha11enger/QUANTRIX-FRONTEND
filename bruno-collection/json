@@ -1,0 +1,99 @@
+[
+  {
+    "iterationIndex": 0,
+    "results": [
+      {
+        "test": {
+          "filename": "Authentication\\Login.bru"
+        },
+        "request": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/v1/auth/login",
+          "headers": {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "Bruno/1.0.0",
+            "X-Request-ID": "d32d9022-ac4d-400a-ad08-c231bbab5f74"
+          },
+          "data": "{\n  \"accountIdentifier\": \"GZYVNTP-44B115TH\",\n  \"username\": \"johndoupdated\",\n  \"password\": \"SecurePass123@\"\n}"
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "headers": {
+            "x-powered-by": "Express",
+            "vary": "Origin",
+            "access-control-allow-credentials": "true",
+            "access-control-expose-headers": "X-Total-Count,X-Page-Count,API-Version,X-Rate-Limit-Limit,X-Rate-Limit-Remaining,X-Rate-Limit-Reset",
+            "api-version": "v1",
+            "content-type": "application/json; charset=utf-8",
+            "content-length": "1289",
+            "etag": "W/\"509-8qfW5rZg+lJILCV1cxxq9kGeQzg\"",
+            "date": "Sat, 08 Nov 2025 18:16:03 GMT",
+            "connection": "keep-alive",
+            "keep-alive": "timeout=5"
+          },
+          "data": {
+            "success": true,
+            "data": {
+              "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVhODMzY2U4LTFmMjctNGQxYi05ZDFiLTc4MzZkOGFhNmRmZiIsImVtYWlsIjoiam9obi5kb2UudXBkYXRlZEBleGFtcGxlLmNvbSIsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3NjI2MjU3NjEsImV4cCI6MTc2MjYyNjY2MSwiYXVkIjoicXVhbnRyaXgtYXBpIiwiaXNzIjoicXVhbnRyaXgtYXV0aCJ9.3mtyVaHL2JHVTtB_Gq02efwh6ekYjJyCEUsEr0PlozI",
+              "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVhODMzY2U4LTFmMjctNGQxYi05ZDFiLTc4MzZkOGFhNmRmZiIsImVtYWlsIjoiam9obi5kb2UudXBkYXRlZEBleGFtcGxlLmNvbSIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzYyNjI1NzYxLCJleHAiOjE3NjMyMzA1NjEsImF1ZCI6InF1YW50cml4LWFwaSIsImlzcyI6InF1YW50cml4LWF1dGgifQ.aK5S0AW4ODjSkCJEa5vtOrFE2V0sPac0rWYbRAOHp0o",
+              "user": {
+                "id": "5a833ce8-1f27-4d1b-9d1b-7836d8aa6dff",
+                "username": "johndoupdated",
+                "email": "john.doe.updated@example.com",
+                "accountIdentifier": "GZYVNTP-44B115TH",
+                "organizationName": "",
+                "accountName": "44B115TH",
+                "companyName": "Tech Innovations Inc"
+              },
+              "expiresIn": 900,
+              "currentRole": {
+                "id": "11111111-1111-1111-1111-111111111111",
+                "name": "ACCOUNTADMIN",
+                "description": "Account administrator with all permissions within their own account only",
+                "default_system_role": true,
+                "created_at": "2025-11-03T08:21:48.080758+00:00",
+                "user_role_is_active": true
+              }
+            },
+            "message": "Login successful",
+            "timestamp": "2025-11-08T18:16:03.550Z"
+          },
+          "url": "http://localhost/api/v1/auth/login",
+          "responseTime": 3326
+        },
+        "error": null,
+        "status": "pass",
+        "assertionResults": [],
+        "testResults": [],
+        "preRequestTestResults": [],
+        "postResponseTestResults": [],
+        "shouldStopRunnerExecution": false,
+        "runDuration": 3.4155972,
+        "name": "Login",
+        "path": "Authentication\\Login",
+        "iterationIndex": 0
+      }
+    ],
+    "summary": {
+      "totalRequests": 1,
+      "passedRequests": 1,
+      "failedRequests": 0,
+      "errorRequests": 0,
+      "skippedRequests": 0,
+      "totalAssertions": 0,
+      "passedAssertions": 0,
+      "failedAssertions": 0,
+      "totalTests": 0,
+      "passedTests": 0,
+      "failedTests": 0,
+      "totalPreRequestTests": 0,
+      "passedPreRequestTests": 0,
+      "failedPreRequestTests": 0,
+      "totalPostResponseTests": 0,
+      "passedPostResponseTests": 0,
+      "failedPostResponseTests": 0
+    }
+  }
+]

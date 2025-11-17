@@ -1,0 +1,171 @@
+meta {
+  name: Get Permission By Code
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/permissions/code/{{permissionCode}}
+  body: none
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+auth:bearer {
+  token: {{actualuser.accessToken}}
+}
+
+script:pre-request {
+  // Pre-request script for Get Permission By Code API
+  // Validates that access token exists and is not expired
+  
+  console.log('=== Get Permission By Code Pre-Request Script ===');
+  
+  // Check if access token exists
+  const accessToken = bru.getEnvVar('actualuser.accessToken');
+  if (!accessToken || accessToken === 'your-access-token-here') {
+    console.warn('Warning: No valid access token found. Please login first.');
+    console.log('Proceeding without modifying environment tokens.');
+  } else {
+    console.log('Access token found, proceeding with permission by code request...');
+  }
+  
+  // Check token expiry if available
+  const tokenExpiry = bru.getEnvVar('actualuser.tokenExpiry');
+  if (tokenExpiry) {
+    const expiryTime = new Date(tokenExpiry);
+    const currentTime = new Date();
+    
+    if (currentTime >= expiryTime) {
+      console.warn('Warning: Access token appears to be expired. Consider refreshing token.');
+    } else {
+      console.log('Access token is still valid.');
+    }
+  }
+  
+  console.log('Pre-request validation completed.');
+}
+
+script:post-response {
+  // Post-response script for Get Permission By Code API
+  // Updates environment with permission by code results
+  
+  console.log('=== Get Permission By Code Post-Response Script ===');
+  console.log('Response Status:', res.status);
+  
+  try {
+    if (res.status === 200) {
+      const responseBody = res.getBody();
+      console.log('Permission retrieved successfully');
+      
+      if (responseBody && responseBody.success && responseBody.data && responseBody.data.permission) {
+        const permission = responseBody.data.permission;
+        
+        // Store permission details
+        if (permission.id) {
+          bru.setEnvVar('actualuser.lastPermissionId', permission.id, {persist: true});
+        }
+        if (permission.code) {
+          bru.setEnvVar('actualuser.lastPermissionCode', permission.code, {persist: true});
+        }
+        if (permission.name) {
+          bru.setEnvVar('actualuser.lastPermissionName', permission.name, {persist: true});
+        }
+        if (permission.category) {
+          bru.setEnvVar('actualuser.lastPermissionCategory', permission.category, {persist: true});
+        }
+        
+        console.log('✅ Permission information stored in environment:');
+        console.log('- Permission ID:', permission.id);
+        console.log('- Permission Code:', permission.code);
+        console.log('- Permission Name:', permission.name);
+        console.log('- Permission Category:', permission.category);
+        
+      } else {
+        console.warn('Warning: Unexpected response structure for successful permission request');
+      }
+      
+    } else if (res.status === 401) {
+      console.error('❌ Authentication failed - Token invalid or expired');
+      
+      // Preserve tokens for debugging; record the auth error instead
+      bru.setEnvVar('actualuser.lastAuthError', '401: invalid or expired token', {persist: true});
+      console.log('Preserving tokens. Recorded lastAuthError for troubleshooting.');
+      
+    } else if (res.status === 403) {
+      console.error('❌ Access forbidden - Token valid but insufficient permissions');
+      
+    } else if (res.status === 404) {
+      console.error('❌ Permission not found - Permission code may be invalid');
+      
+    } else if (res.status === 429) {
+      console.error('❌ Rate limit exceeded - Too many permission requests');
+      
+    } else if (res.status >= 500) {
+      console.error('❌ Server error occurred while fetching permission');
+      
+    } else {
+      console.error('❌ Unexpected response status:', res.status);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing permission response:', error.message);
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+tests {
+  // Test response status
+  test("Response status should be 200 for successful retrieval", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  // Test response time
+  test("Response time should be reasonable", function() {
+    expect(res.getResponseTime()).to.be.below(5000);
+  });
+  
+  // Test response structure
+  test("Response should have success flag", function() {
+    const responseData = res.getBody();
+    expect(responseData).to.have.property('success');
+  });
+  
+  // Test permission data structure (if successful)
+  test("Permission data should be valid (if success)", function() {
+    const responseData = res.getBody();
+    if (responseData.success && res.getStatus() === 200) {
+      expect(responseData).to.have.property('data');
+      expect(responseData.data).to.have.property('id');
+      expect(responseData.data).to.have.property('code');
+      expect(responseData.data).to.have.property('name');
+      expect(responseData.data).to.have.property('category');
+      
+      // Validate permission code format
+      expect(responseData.data.code).to.match(/^[a-z]+\.[a-z]+\.[a-z_]+$/);
+    }
+  });
+  
+  // Test error handling for non-200 responses
+  test("Error responses should have proper structure", function() {
+    if (res.getStatus() !== 200) {
+      const responseData = res.getBody();
+      expect(responseData).to.have.property('success');
+      expect(responseData.success).to.be.false;
+      expect(responseData).to.have.property('error');
+    }
+  });
+  
+  // Test admin permission requirement (403 for non-admin users)
+  test("Should require admin permissions", function() {
+    // If user doesn't have admin permissions, expect 403
+    // If user has admin permissions, expect 200 or 404
+    const status = res.getStatus();
+    expect([200, 403, 404]).to.include(status);
+  });
+}

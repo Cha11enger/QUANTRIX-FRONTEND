@@ -1,0 +1,192 @@
+meta {
+  name: Detailed Health Check
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health/detailed
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+script:pre-request {
+  // Pre-request script for Detailed Health Check API
+  // Logs detailed health check attempt and sets up monitoring variables
+  
+  console.log('=== Detailed Health Check Pre-Request Script ===');
+  
+  // Set health check timestamp
+  const currentTime = new Date().toISOString();
+  bru.setEnvVar('healthcheck.detailed.lastAttempt', currentTime);
+  
+  // Log health check initiation
+  console.log('Initiating detailed service health check...');
+  console.log('Timestamp:', currentTime);
+  
+  console.log('Pre-request setup completed.');
+}
+
+script:post-response {
+  // Post-response script for Detailed Health Check API
+  // Logs detailed health status and stores service information
+  
+  console.log('=== Detailed Health Check Post-Response Script ===');
+  
+  const currentTime = new Date().toISOString();
+  
+  // Check response status and handle accordingly
+  if (res.status === 200) {
+    const responseBody = res.getBody();
+    console.log('✅ Detailed health check successful');
+    
+    if (responseBody && responseBody.success && responseBody.data) {
+      const data = responseBody.data;
+      
+      // Store detailed service health information
+      bru.setEnvVar('healthcheck.detailed.lastSuccess', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.detailed.overallStatus', data.status || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.detailed.serviceVersion', data.version || 'unknown', {persist: true});
+      bru.setEnvVar('healthcheck.detailed.environment', data.environment || 'unknown', {persist: true});
+      
+      // Store service details
+      if (data.services && Array.isArray(data.services)) {
+        bru.setEnvVar('healthcheck.detailed.serviceCount', data.services.length.toString(), {persist: true});
+        
+        // Store individual service statuses
+        data.services.forEach((service, index) => {
+          bru.setEnvVar(`healthcheck.detailed.service.${service.name}.status`, service.status, {persist: true});
+          bru.setEnvVar(`healthcheck.detailed.service.${service.name}.responseTime`, service.responseTime?.toString() || '0', {persist: true});
+          bru.setEnvVar(`healthcheck.detailed.service.${service.name}.lastCheck`, service.lastCheck || currentTime, {persist: true});
+        });
+      }
+      
+      // Store system information
+      if (data.system) {
+        bru.setEnvVar('healthcheck.detailed.platform', data.system.platform || 'unknown', {persist: true});
+        bru.setEnvVar('healthcheck.detailed.arch', data.system.arch || 'unknown', {persist: true});
+        bru.setEnvVar('healthcheck.detailed.nodeVersion', data.system.nodeVersion || 'unknown', {persist: true});
+      }
+      
+      // Store memory usage
+      if (data.memory) {
+        bru.setEnvVar('healthcheck.detailed.memory.heapUsed', data.memory.heapUsed?.toString() || '0', {persist: true});
+        bru.setEnvVar('healthcheck.detailed.memory.heapTotal', data.memory.heapTotal?.toString() || '0', {persist: true});
+        bru.setEnvVar('healthcheck.detailed.memory.rss', data.memory.rss?.toString() || '0', {persist: true});
+      }
+      
+      // Clear any previous failure information
+      bru.setEnvVar('healthcheck.detailed.lastFailure', '', {persist: true});
+      bru.setEnvVar('healthcheck.detailed.failureReason', '', {persist: true});
+      
+      console.log('✅ Detailed service health information updated:');
+      console.log('- Overall Status:', data.status);
+      console.log('- Version:', data.version);
+      console.log('- Environment:', data.environment);
+      console.log('- Service Count:', data.services?.length || 0);
+      console.log('- Platform:', data.system?.platform);
+      console.log('- Node Version:', data.system?.nodeVersion);
+      
+      // Preserve authentication environment variables
+      const preserveAuthVars = [
+        'refreshToken', 'accessToken', 'username', 'email', 'accountIdentifier',
+        'password', 'confirmPassword', 'firstName', 'lastName', 'companyName',
+        'organizationName', 'tokenExpiry', 'refreshTokenExpiry', 'userId',
+        'isLoggedIn', 'lastLoginTime', 'isVerified', 'lastVerificationTime'
+      ];
+      
+      preserveAuthVars.forEach(varName => {
+        const value = bru.getEnvVar(varName);
+        if (value) {
+          bru.setEnvVar(varName, value, {persist: true});
+        }
+      });
+      
+    } else {
+      console.log('⚠️ Unexpected response format');
+      bru.setEnvVar('healthcheck.detailed.lastFailure', currentTime, {persist: true});
+      bru.setEnvVar('healthcheck.detailed.failureReason', 'Unexpected response format', {persist: true});
+    }
+    
+  } else {
+    console.log(`❌ Detailed health check failed with status: ${res.status}`);
+    bru.setEnvVar('healthcheck.detailed.lastFailure', currentTime, {persist: true});
+    bru.setEnvVar('healthcheck.detailed.failureReason', `HTTP ${res.status}`, {persist: true});
+    bru.setEnvVar('healthcheck.detailed.overallStatus', 'failed', {persist: true});
+  }
+  
+  console.log('Post-response processing completed.');
+}
+
+docs {
+  # Detailed Health Check API
+  
+  ## Overview
+  This endpoint provides comprehensive health information about all system services and components.
+  
+  ## Endpoint
+  `GET /api/v1/health/detailed`
+  
+  ## Response Format
+  
+  **200 OK** - Detailed health information
+  ```json
+  {
+    "success": true,
+    "data": {
+      "status": "OK|DEGRADED|UNHEALTHY",
+      "timestamp": "2025-11-01T07:48:41.623Z",
+      "uptime": 29.769989,
+      "version": "0.0.0",
+      "environment": "development",
+      "memory": {
+        "heapUsed": 24500368,
+        "heapTotal": 26382336,
+        "external": 4484307,
+        "rss": 87863296
+      },
+      "services": [
+        {
+          "name": "database",
+          "status": "healthy|unhealthy|degraded",
+          "responseTime": 872,
+          "lastCheck": "2025-11-01T07:48:41.623Z",
+          "metadata": {
+            "responseTimeMs": 872,
+            "checkDuration": "872ms"
+          }
+        }
+      ],
+      "system": {
+        "platform": "win32",
+        "arch": "x64",
+        "nodeVersion": "v22.13.1",
+        "cpuUsage": {
+          "user": 1328000,
+          "system": 546000
+        }
+      }
+    },
+    "timestamp": "2025-11-01T07:48:41.623Z"
+  }
+  ```
+  
+  ## Use Cases
+  - Comprehensive system monitoring
+  - Service dependency validation
+  - Performance metrics collection
+  - Troubleshooting system issues
+  
+  ## Environment Variables Set
+  - `healthcheck.detailed.lastSuccess` - Last successful check timestamp
+  - `healthcheck.detailed.overallStatus` - Overall system status
+  - `healthcheck.detailed.serviceCount` - Number of monitored services
+  - `healthcheck.detailed.service.{name}.status` - Individual service status
+  - `healthcheck.detailed.platform` - System platform information
+  - `healthcheck.detailed.nodeVersion` - Node.js version
+}

@@ -1,0 +1,38 @@
+meta {
+  name: TestEnvVars
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/{{apiVersion}}/health/basic
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  console.log('=== Testing Environment Variables ===');
+  
+  // Check all the actualuser variables
+  const allVars = [
+    'actualuser.accessToken',
+    'actualuser.tokenExpiry',
+    'actualuser.refreshToken',
+    'actualuser.refreshTokenExpiry',
+    'actualuser.userId',
+    'actualuser.username',
+    'actualuser.email'
+  ];
+  
+  allVars.forEach(varName => {
+    const value = bru.getEnvVar(varName);
+    console.log(`${varName}:`, value ? 'FOUND' : 'NOT FOUND', value ? '(' + (value.length > 20 ? value.substring(0, 20) + '...' : value) + ')' : '');
+  });
+  
+  // Also check using bru.getVar
+  console.log('\n=== Using bru.getVar ===');
+  allVars.forEach(varName => {
+    const value = bru.getVar(varName);
+    console.log(`${varName} (getVar):`, value ? 'FOUND' : 'NOT FOUND', value ? '(' + (value.length > 20 ? value.substring(0, 20) + '...' : value) + ')' : '');
+  });
+}

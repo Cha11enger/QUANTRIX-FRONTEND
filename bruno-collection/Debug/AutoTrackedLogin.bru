@@ -1,0 +1,162 @@
+meta {
+  name: Auto Tracked Login
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Request-ID: {{$guid}}
+}
+
+body:json {
+  {
+    "accountIdentifier": "{{actualuser.accountIdentifier}}",
+    "username": "{{actualuser.username}}",
+    "password": "{{actualuser.password}}"
+  }
+}
+
+script:pre-request {
+  // Auto-track this request using our request-response manager
+  const { trackRequest } = require('./scripts/request-response-manager.js');
+  
+  console.log('🚀 Auto-tracking login request...');
+  
+  // Track the request details
+  trackRequest(req, 'AutoLogin');
+  
+  // Verify required credentials exist
+  const requiredFields = ['username', 'password', 'accountIdentifier'];
+  const missingFields = [];
+  
+  requiredFields.forEach(field => {
+    const envKey = `actualuser.${field}`;
+    const value = bru.getEnvVar(envKey);
+    
+    if (!value) {
+      missingFields.push(field);
+      console.warn(`⚠️  Missing required field: ${envKey}`);
+    }
+  });
+  
+  if (missingFields.length > 0) {
+    console.error(`🚨 Cannot proceed with login - missing fields: ${missingFields.join(', ')}`);
+  } else {
+    console.log('✅ All required fields are present');
+  }
+}
+
+script:post-response {
+  // Auto-track this response using our request-response manager
+  const { trackResponse, validateTokens } = require('./scripts/request-response-manager.js');
+  
+  console.log('📥 Auto-tracking login response...');
+  
+  // Track the response (this will automatically extract tokens and user data)
+  trackResponse(res, 'AutoLogin', {
+    persistTokens: true,
+    extractUserData: true
+  });
+  
+  // Validate the stored tokens
+  const tokenValidation = validateTokens('AutoLogin');
+  
+  if (tokenValidation.isValid) {
+    console.log('✅ Login successful and tokens stored!');
+    
+    // Use the new persister to save tokens to the environment file
+    const { persistLoginTokens } = require('./scripts/env-persister.js');
+    const currentEnv = bru.getEnvName();
+    
+    // Get the response data directly from the response object
+    let responseData = {};
+    try {
+      // The tokens might be nested in a 'data' property
+      const rawData = res.data || res.body || {};
+      responseData = rawData.data || rawData; // Use nested data if available
+      console.log('📦 Response data structure:', Object.keys(rawData));
+      console.log('📦 Using data object:', Object.keys(responseData));
+    } catch (e) {
+      console.error('❌ Could not extract response data:', e.message);
+    }
+    
+    // Get tokens from AutoLogin namespace where trackResponse stored them
+    const autoLoginAccessToken = bru.getEnvVar('AutoLogin.accessToken');
+    const autoLoginRefreshToken = bru.getEnvVar('AutoLogin.refreshToken');
+    const autoLoginTokenExpiry = bru.getEnvVar('AutoLogin.tokenExpiry');
+    const autoLoginRefreshTokenExpiry = bru.getEnvVar('AutoLogin.refreshTokenExpiry');
+    
+    // Create a proper responseData object with tokens
+    const tokenData = {
+      accessToken: autoLoginAccessToken,
+      refreshToken: autoLoginRefreshToken,
+      tokenExpiry: autoLoginTokenExpiry,
+      refreshTokenExpiry: autoLoginRefreshTokenExpiry,
+      user: responseData.user || {
+        id: bru.getEnvVar('AutoLogin.user.id'),
+        username: bru.getEnvVar('AutoLogin.user.username'),
+        email: bru.getEnvVar('AutoLogin.user.email')
+      }
+    };
+    
+    console.log(`💾 Persisting tokens to ${currentEnv} environment...`);
+    const persistenceResults = persistLoginTokens(currentEnv, tokenData);
+    
+    console.log('📊 Token persistence results:', persistenceResults);
+    
+    // Also copy tokens to runtime environment for immediate use
+    const accessToken = bru.getEnvVar('AutoLogin.accessToken');
+    const refreshToken = bru.getEnvVar('AutoLogin.refreshToken');
+    const tokenExpiry = bru.getEnvVar('AutoLogin.tokenExpiry');
+    const refreshTokenExpiry = bru.getEnvVar('AutoLogin.refreshTokenExpiry');
+    
+    if (accessToken) {
+      bru.setEnvVar('actualuser.accessToken', accessToken);
+      console.log('💾 Copied accessToken to actualuser.accessToken (runtime)');
+    }
+    
+    if (refreshToken) {
+      bru.setEnvVar('actualuser.refreshToken', refreshToken);
+      console.log('💾 Copied refreshToken to actualuser.refreshToken (runtime)');
+    }
+    
+    if (tokenExpiry) {
+      bru.setEnvVar('actualuser.tokenExpiry', tokenExpiry);
+      console.log('💾 Copied tokenExpiry to actualuser.tokenExpiry (runtime)');
+    }
+    
+    if (refreshTokenExpiry) {
+      bru.setEnvVar('actualuser.refreshTokenExpiry', refreshTokenExpiry);
+      console.log('💾 Copied refreshTokenExpiry to actualuser.refreshTokenExpiry (runtime)');
+    }
+    
+  } else {
+    console.error('❌ Login failed or tokens invalid:', tokenValidation);
+  }
+  
+  // Display stored data summary
+  const { getStoredData } = require('./scripts/request-response-manager.js');
+  
+  console.log('\n📊 Stored Data Summary:');
+  console.log('======================');
+  
+  const responseData = getStoredData('AutoLogin', 'response');
+  console.log(`Response Status: ${responseData.status}`);
+  console.log(`Response Time: ${responseData.time}`);
+  
+  const tokenData = getStoredData('AutoLogin', 'tokens');
+  console.log(`Has Access Token: ${!!tokenData.accessToken}`);
+  console.log(`Has Refresh Token: ${!!tokenData.refreshToken}`);
+  
+  const userData = getStoredData('AutoLogin', 'user');
+  console.log(`User ID: ${userData.id || 'N/A'}`);
+  console.log(`Username: ${userData.username || 'N/A'}`);
+  console.log(`Email: ${userData.email || 'N/A'}`);
+}

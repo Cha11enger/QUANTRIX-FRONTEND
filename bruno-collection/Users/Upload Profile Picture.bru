@@ -1,0 +1,53 @@
+meta {
+  name: Upload Profile Picture
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/users/me/profile-picture
+  body: multipart-form
+  auth: bearer
+}
+
+headers {
+  X-Request-ID: {{$guid}}
+  ~Content-Type: application/json
+  ~Accept: application/json
+  Content-Type: multipart/form-data
+}
+
+auth:bearer {
+  token: {{actualuser.accessToken}}
+}
+
+body:multipart-form {
+  file: @file()
+}
+
+script:pre-request {
+  const url = req.getUrl();
+  const method = req.getMethod();
+  const headers = req.getHeaders();
+  const rawBody = req.getBody({ raw: true });
+  req.setHeader('Content-Type', 'multipart/form-data');
+  const updatedHeaders = req.getHeaders();
+  console.log('📤 BRUNO PRE-REQUEST', { url, method });
+  console.log('📤 BRUNO HEADERS (before)', headers);
+  console.log('📤 BRUNO HEADERS (after set)', updatedHeaders);
+  console.log('📤 BRUNO RAW BODY', rawBody);
+}
+
+script:post-response {
+  const status = res.getStatus();
+  const body = res.getBody();
+  console.log('📥 BRUNO RESPONSE STATUS', status);
+  console.log('📥 BRUNO RESPONSE BODY', body);
+  if (status === 200 && body && body.data && body.data.url) {
+    bru.setEnvVar('actualuser.profilePictureUrl', body.data.url, { persist: true });
+  }
+}
+
+tests {
+  test("Status 200", function() { expect(res.getStatus()).to.equal(200); });
+}

@@ -1,0 +1,15 @@
+vars {
+  baseUrl: https://api.quantrix.ai/api
+  apiVersion: v1
+  environment: production
+  timeout: 30000
+  retryAttempts: 2
+  logLevel: error
+}
+
+vars:secret [
+  actualuser.accessToken,
+  actualuser.refreshToken,
+  supabaseAnonKey,
+  supabaseServiceRoleKey
+]

@@ -1,0 +1,71 @@
+meta {
+  name: ManualTokenTest
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/{{apiVersion}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "accountIdentifier": "{{actualuser.accountIdentifier}}",
+    "username": "{{actualuser.username}}",
+    "password": "{{actualuser.password}}"
+  }
+}
+
+script:post-response {
+  console.log('=== MANUAL TOKEN STORAGE TEST ===');
+  console.log('Response status:', res.status);
+  console.log('Response body:', JSON.stringify(res.body, null, 2));
+  
+  // Handle different response structures
+  let actualToken, refreshToken;
+  
+  if (res.body) {
+    // Check various possible response structures
+    if (res.body.data) {
+      actualToken = res.body.data.token || res.body.data.accessToken;
+      refreshToken = res.body.data.refreshToken;
+    } else {
+      actualToken = res.body.token || res.body.accessToken;
+      refreshToken = res.body.refreshToken;
+    }
+  }
+  
+  console.log('Extracted token:', actualToken ? actualToken.substring(0, 20) + '...' : 'NOT FOUND');
+  console.log('Extracted refreshToken:', refreshToken ? refreshToken.substring(0, 20) + '...' : 'NOT FOUND');
+  
+  // Only store if we have valid tokens
+  if (actualToken) {
+    bru.setEnvVar("manual.accessToken", actualToken, { persist: true });
+    bru.setEnvVar("manual.tokenExpiry", "2025-12-01T00:00:00.000Z", { persist: true });
+  } else {
+    // Store a test token if no real token found
+    bru.setEnvVar("manual.accessToken", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.token", { persist: true });
+    bru.setEnvVar("manual.tokenExpiry", "2025-12-01T00:00:00.000Z", { persist: true });
+  }
+  
+  if (refreshToken) {
+    bru.setEnvVar("manual.refreshToken", refreshToken, { persist: true });
+  } else {
+    bru.setEnvVar("manual.refreshToken", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.refresh", { persist: true });
+  }
+  
+  bru.setEnvVar("manual.refreshTokenExpiry", "2026-01-01T00:00:00.000Z", { persist: true });
+  
+  // Also try with a simple hardcoded token
+  bru.setEnvVar("manual.simpleToken", "test123", { persist: true });
+  
+  // Verify immediately
+  console.log("=== MANUAL TOKEN STORAGE VERIFICATION ===");
+  console.log("manual.accessToken:", bru.getEnvVar("manual.accessToken"));
+  console.log("manual.tokenExpiry:", bru.getEnvVar("manual.tokenExpiry"));
+  console.log("manual.refreshToken:", bru.getEnvVar("manual.refreshToken"));
+  console.log("manual.refreshTokenExpiry:", bru.getEnvVar("manual.refreshTokenExpiry"));
+  console.log("manual.simpleToken:", bru.getEnvVar("manual.simpleToken"));
+}
