@@ -46,9 +46,9 @@ export function RolesManagement({ roles, onCreateRole, onUpdateRole, onDeleteRol
     isSystem: false,
     isActive: true
   });
-  const [apiRoles, setApiRoles] = useState<Role[]>(roles || []);
+  const [apiRoles, setApiRoles] = useState<Role[]>([]);
   const [currentRoleName, setCurrentRoleName] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   // success state replaced by toast messages
   const [saving, setSaving] = useState<boolean>(false);
@@ -186,7 +186,7 @@ export function RolesManagement({ roles, onCreateRole, onUpdateRole, onDeleteRol
 
   const renderGridView = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {(apiRoles.length ? apiRoles : roles).map((role) => (
+      {apiRoles.map((role) => (
         <div
           key={role.id}
           className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-200 cursor-pointer"
@@ -293,7 +293,7 @@ export function RolesManagement({ roles, onCreateRole, onUpdateRole, onDeleteRol
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-          {(apiRoles.length ? apiRoles : roles).map((role) => (
+          {apiRoles.map((role) => (
             <tr
               key={role.id}
               className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
@@ -378,9 +378,7 @@ export function RolesManagement({ roles, onCreateRole, onUpdateRole, onDeleteRol
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Manage user roles and permissions for your organization
           </p>
-          {loading && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Loading roles...</p>
-          )}
+          
           {error && (
             <p className="text-xs text-red-600 dark:text-red-400 mt-1">{error}</p>
           )}
@@ -423,7 +421,16 @@ export function RolesManagement({ roles, onCreateRole, onUpdateRole, onDeleteRol
         </div>
       </div>
 
-      {viewMode === 'grid' ? renderGridView() : renderTableView()}
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
+            <Loader2 className="w-6 h-6 animate-spin" />
+            <span className="text-sm md:text-base">Loading roles...</span>
+          </div>
+        </div>
+      ) : (
+        viewMode === 'grid' ? renderGridView() : renderTableView()
+      )}
 
       {/* Modal */}
       {showModal && (

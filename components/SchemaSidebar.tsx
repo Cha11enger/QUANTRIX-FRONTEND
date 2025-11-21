@@ -504,92 +504,94 @@ export function SchemaSidebar() {
     <div className="h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        {/* Workspace Dropdown */}
-        <div className="relative mb-3" ref={dropdownRef}>
-          <button
-            onClick={() => setShowWorkspaceDropdown(!showWorkspaceDropdown)}
-            className="w-full flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors group"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <FolderOpen className="w-4 h-4 text-gray-600 dark:text-gray-300 flex-shrink-0" />
-              <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                {currentWorkspace}
-              </span>
-            </div>
-            <ChevronDown className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${
-              showWorkspaceDropdown ? 'rotate-180' : ''
-            }`} />
-          </button>
-
-          {/* Workspace Dropdown Menu */}
-          {showWorkspaceDropdown && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-20 py-1">
-              {/* Search */}
-              <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-600">
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search"
-                    className="w-full pl-7 pr-3 py-1 text-xs bg-gray-50 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
+        {/* Workspace Dropdown: only show in SQL Editor */}
+        {pathname === '/sql-editor' && (
+          <div className="relative mb-3" ref={dropdownRef}>
+            <button
+              onClick={() => setShowWorkspaceDropdown(!showWorkspaceDropdown)}
+              className="w-full flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors group"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <FolderOpen className="w-4 h-4 text-gray-600 dark:text-gray-300 flex-shrink-0" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {currentWorkspace}
+                </span>
               </div>
+              <ChevronDown className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${
+                showWorkspaceDropdown ? 'rotate-180' : ''
+              }`} />
+            </button>
 
-              {/* Workspaces Section */}
-              <div className="py-1">
-                <div className="px-3 py-1">
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Workspaces
-                  </span>
+            {/* Workspace Dropdown Menu */}
+            {showWorkspaceDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-20 py-1">
+                {/* Search */}
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-600">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search"
+                      className="w-full pl-7 pr-3 py-1 text-xs bg-gray-50 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
-                {workspaces.map((workspace) => (
-                  <button
-                    key={workspace.id}
+
+                {/* Workspaces Section */}
+                <div className="py-1">
+                  <div className="px-3 py-1">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Workspaces
+                    </span>
+                  </div>
+                  {workspaces.map((workspace) => (
+                    <button
+                      key={workspace.id}
+                      onClick={() => {
+                        setCurrentWorkspace(workspace.name);
+                        setShowWorkspaceDropdown(false);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FolderOpen className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                        <span className="text-sm text-gray-900 dark:text-white">
+                          {workspace.name}
+                        </span>
+                      </div>
+                      {currentWorkspace === workspace.name && (
+                        <Check className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Create Workspace Section */}
+                <div className="border-t border-gray-200 dark:border-gray-600 py-1">
+                  <div className="px-3 py-1">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Create Workspace
+                    </span>
+                  </div>
+                  <button 
                     onClick={() => {
-                      setCurrentWorkspace(workspace.name);
+                      setShowNewWorkspaceModal(true);
                       setShowWorkspaceDropdown(false);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors group"
+                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                   >
-                    <div className="flex items-center gap-2">
-                      <FolderOpen className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                      <span className="text-sm text-gray-900 dark:text-white">
-                        {workspace.name}
-                      </span>
-                    </div>
-                    {currentWorkspace === workspace.name && (
-                      <Check className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                    )}
+                    <Plus className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                    <span className="text-sm text-gray-900 dark:text-white">New</span>
                   </button>
-                ))}
-              </div>
-
-              {/* Create Workspace Section */}
-              <div className="border-t border-gray-200 dark:border-gray-600 py-1">
-                <div className="px-3 py-1">
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Create Workspace
-                  </span>
+                  <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                    <GitBranch className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                    <span className="text-sm text-gray-900 dark:text-white">From Git repository</span>
+                  </button>
                 </div>
-                <button 
-                  onClick={() => {
-                    setShowNewWorkspaceModal(true);
-                    setShowWorkspaceDropdown(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                >
-                  <Plus className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                  <span className="text-sm text-gray-900 dark:text-white">New</span>
-                </button>
-                <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                  <GitBranch className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                  <span className="text-sm text-gray-900 dark:text-white">From Git repository</span>
-                </button>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-gray-900 dark:text-gray-100">

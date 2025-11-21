@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { User, Camera, Save, Upload, X, AlertCircle } from 'lucide-react';
 import { AuthService, ProfileResponse } from '@/lib/api';
-import { useAuthStore } from '@/lib/store';
+import { useAuthStore, useAppStore } from '@/lib/store';
 import { AuthDebug } from '@/lib/auth-debug';
 
 interface ProfileData {
@@ -42,6 +42,7 @@ export function ProfileSettings({ profile, onUpdateProfile }: ProfileSettingsPro
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { updateProfile } = useAuthStore();
+  const { currentRole } = useAppStore();
 
   // Fetch profile data on component mount
   useEffect(() => {
@@ -542,7 +543,7 @@ export function ProfileSettings({ profile, onUpdateProfile }: ProfileSettingsPro
               </label>
               <input
                 type="text"
-                value={formData.role || ''}
+                value={currentRole || (typeof formData.role === 'string' ? formData.role : Array.isArray(formData.roles) ? (formData.roles[0] || '') : '')}
                 readOnly
                 className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
               />

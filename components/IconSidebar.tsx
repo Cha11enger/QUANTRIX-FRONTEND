@@ -5,7 +5,7 @@ import { useTheme } from 'next-themes';
 import { Database, Chrome as Home, Code, MessageSquare, Settings, Sun, Moon, LogOut, Menu, X, ChevronDown, ChevronRight, Check, User, Copy } from 'lucide-react';
 import { useAuthStore, useAppStore } from '@/lib/store';
 import { mockConnections } from '@/lib/data';
-import { AuthService } from '@/lib/api';
+import { AuthService, ProfileResponse } from '@/lib/api';
 import { useState, useCallback, useMemo, forwardRef, useEffect } from 'react';
 import {
   DropdownMenu,
@@ -116,6 +116,7 @@ export function IconSidebar() {
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [accountDetailsOpen, setAccountDetailsOpen] = useState(false);
+  const [profile, setProfile] = useState<ProfileResponse | null>(null);
   
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
   const [roleIdMap, setRoleIdMap] = useState<Record<string, string>>({});
@@ -144,6 +145,19 @@ export function IconSidebar() {
     fetchRoles();
     return () => { mounted = false; };
   }, [activeConnection, rolesRefreshTick]);
+
+  useEffect(() => {
+    if (!accountDetailsOpen) return;
+    let mounted = true;
+    AuthService.getProfile()
+      .then((p) => {
+        if (mounted) setProfile(p);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [accountDetailsOpen]);
 
   const handleLogout = async () => {
     try {
@@ -304,10 +318,8 @@ export function IconSidebar() {
                             if (roleId) {
                               AuthService.switchCurrentRole(roleId)
                                 .then(() => {
-                                  setTimeout(() => {
-                                    setCurrentRole(role);
-                                    setProfileDropdownOpen(false);
-                                  }, 0);
+                                  setCurrentRole(role);
+                                  setProfileDropdownOpen(false);
                                 })
                                 .catch(err => console.warn('Switch role failed', err));
                             }
@@ -346,7 +358,9 @@ export function IconSidebar() {
                     </div>
                     <div>
                       <span className="text-gray-900 dark:text-white">Account</span>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">RQB55567</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {(profile?.accountName || '—')} • {(profile?.username || user?.name || '—')}
+                      </div>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -360,14 +374,14 @@ export function IconSidebar() {
               >
                 <div className="p-4">
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">TRCSVVO</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{profile?.organizationName || '—'}</h3>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">RQB55567</span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{profile?.accountName || '—'}</span>
                         <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        RANJITHRJ - 🇺🇸 US West (Oregon)
+                        {(profile?.username || user?.name || '—')}
                       </p>
                       <button 
                         onClick={() => {
@@ -461,10 +475,11 @@ export function IconSidebar() {
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-700">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white mx-auto">Account Details</h2>
+                <div className="w-6 h-6" />
+                <h2 className="text-xl font-semibold text-white text-center">Account Details</h2>
                 <button
                   onClick={() => setAccountDetailsOpen(false)}
-                  className="text-gray-400 hover:text-white transition-colors absolute right-6"
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -476,35 +491,39 @@ export function IconSidebar() {
               <div className="space-y-4">
                 {/* Account Details Table */}
                 <div className="space-y-4">
-                  {[
-                    { name: 'Account identifier', value: 'TRCSVVO-RQB55567', hasIcon: true },
-                    { name: 'Data sharing account identifier', value: 'TRCSVVO.RQB55567', hasIcon: true },
-                    { name: 'Organization name', value: 'TRCSVVO', hasIcon: true },
-                    { name: 'Account name', value: 'RQB55567', hasIcon: true },
-                    { name: 'Account/Server URL', value: 'TRCSVVO-RQB55567.snowflakecomputing.com', hasIcon: true },
-                    { name: 'Login name', value: 'RANJITHRJ', hasIcon: true },
-                    { name: 'Role', value: 'ACCOUNTADMIN', hasIcon: true },
-                    { name: 'Account locator', value: 'KEB70244', hasIcon: true },
-                    { name: 'Cloud platform', value: 'AWS', hasIcon: true },
-                    { name: 'Edition', value: 'Enterprise', hasIcon: true }
-                  ].map((item, index) => (
-                    <div key={index} className="flex items-center justify-between py-3 border-b border-gray-700 last:border-b-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-300 font-medium">{item.name}</span>
-                        {item.hasIcon && (
-                          <div className="w-4 h-4 rounded-full bg-gray-600 flex items-center justify-center">
-                            <span className="text-xs text-gray-400">?</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-white font-mono">{item.value}</span>
-                        <button className="text-gray-400 hover:text-white transition-colors">
-                          <Copy className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                  {(
+                    (() => {
+                      const serverUrl = profile?.accountIdentifier ? `${profile.accountIdentifier}.snowflakecomputing.com` : '';
+                      const roleValue = String(((profile as any)?.role?.name ?? profile?.role ?? currentRole) || currentRole);
+                      const items = [
+                        { name: 'Account identifier', value: profile?.accountIdentifier ?? '', hasIcon: true },
+                        { name: 'Data sharing account identifier', value: profile?.dataSharingIdentifier ?? '', hasIcon: true },
+                        { name: 'Organization name', value: profile?.organizationName ?? '', hasIcon: true },
+                        { name: 'Account name', value: profile?.accountName ?? '', hasIcon: true },
+                        { name: 'Account/Server URL', value: serverUrl, hasIcon: true },
+                        { name: 'Login name', value: profile?.username ?? '', hasIcon: true },
+                        { name: 'Role', value: roleValue, hasIcon: true },
+                      ].filter(i => i.value && String(i.value).length > 0);
+                      return items;
+                    })()
+                  ).map((item, index) => (
+                     <div key={index} className="flex items-center justify-between py-3 border-b border-gray-700 last:border-b-0">
+                       <div className="flex items-center gap-2">
+                         <span className="text-sm text-gray-300 font-medium">{item.name}</span>
+                         {item.hasIcon && (
+                           <div className="w-4 h-4 rounded-full bg-gray-600 flex items-center justify-center">
+                             <span className="text-xs text-gray-400">?</span>
+                           </div>
+                         )}
+                       </div>
+                       <div className="flex items-center gap-2">
+                         <span className="text-sm text-white font-mono">{String(item.value)}</span>
+                         <button className="text-gray-400 hover:text-white transition-colors">
+                           <Copy className="w-4 h-4" />
+                         </button>
+                       </div>
+                     </div>
+                   ))}
                 </div>
               </div>
             </div>

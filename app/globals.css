@@ -80,3 +80,46 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer base {
+  html {
+    font-size: 14px;
+  }
+}
+
+/* Tabs scroll behavior: hide scrollbar until hover */
+.tabs-scroll {
+  overflow-x: auto;
+}
+.tabs-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.tabs-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.6);
+  border-radius: 4px;
+}
+.tabs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tabs-scroll { scrollbar-width: none; }
+.tabs-scroll:hover { scrollbar-width: thin; }
+.tabs-scroll:hover::-webkit-scrollbar { display: block; }
+.tabs-scroll::-webkit-scrollbar { display: none; }
+
+/* Prevent tabs under the fixed add button from getting clickable overlap */
+.tabs-scroll { padding-right: 3.5rem; }
+.tabs-scroll { position: relative; z-index: 1; }
+
+/* Make scrollbar end before fixed button by adding transparent end-padding */
+.tabs-scroll-width {
+  mask-image: linear-gradient(to right, black 0%, black calc(100% - 3.5rem), transparent 100%);
+}
+
+/* WebKit scrollbar width respects padding; Firefox uses scrollbar-gutter, but limited support */
+.tabs-scroll { scrollbar-gutter: stable both-edges; }
+
+@layer base {
+  input, select, textarea, label, button {
+    @apply text-xs;
+  }
+}

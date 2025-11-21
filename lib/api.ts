@@ -365,6 +365,14 @@ class ApiClient {
       throw new ApiError(400, 'Failed to get profile');
     }
 
+    const roleSource = user.currentRole || user.role;
+    const roleName = typeof roleSource === 'string'
+      ? roleSource
+      : (roleSource?.name || roleSource?.roleName || '');
+    const rolesList = Array.isArray(user.roles)
+      ? user.roles.map((r: any) => typeof r === 'string' ? r : (r?.name || r?.roleName || '')).filter(Boolean)
+      : [];
+
     const normalized: ProfileResponse = {
       id: user.id,
       firstName: user.firstName,
@@ -378,8 +386,8 @@ class ApiClient {
       companyName: user.companyName,
       fullName: user.fullName,
       profilePictureUrl: user.profilePictureUrl ?? null,
-      role: user.currentRole || user.role,
-      roles: user.roles || [],
+      role: roleName,
+      roles: rolesList,
       isActive: user.isVerified ?? true,
       isVerified: user.isVerified,
     };

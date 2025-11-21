@@ -32,11 +32,13 @@ export function SQLEditorTabs({
 
   return (
     <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-      <div className="flex items-center">
-        <div className="flex items-center overflow-x-auto">
+      <div className="flex items-center relative">
+        <div className="flex items-center overflow-x-auto tabs-scroll tabs-scroll-width">
           {openTabsList.map((tab) => (
             <div key={tab.id} className="relative">
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => setActiveSqlTab(tab.id)}
                 onContextMenu={(e) => onTabContextMenu(e, tab.id)}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
@@ -46,14 +48,14 @@ export function SQLEditorTabs({
                 }`}
               >
                 <FileText className="w-4 h-4" />
-                <span>{tab.name}</span>
-                <button
-                  onClick={(e) => onCloseTab(tab.id, e)}
-                  className="ml-1 p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                <span className="font-medium truncate max-w-[160px]">{tab.name}</span>
+                <span
+                  onClick={(e) => onCloseTab(tab.id, e as any)}
+                  className="ml-1 p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors cursor-pointer"
                 >
                   <X className="w-3 h-3" />
-                </button>
-              </button>
+                </span>
+              </div>
 
               {/* Tab Context Menu */}
               {tabContextMenus[tab.id] && (
@@ -80,12 +82,15 @@ export function SQLEditorTabs({
           ))}
         </div>
         
-        <button
-          onClick={onNewTab}
-          className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+        <div className="absolute right-0 top-0 h-full w-14 bg-white dark:bg-gray-800 z-30 flex items-center justify-center">
+          <button
+            onClick={onNewTab}
+            className="z-40 flex items-center gap-1 px-3 py-2 text-sm font-medium border-b-2 border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded"
+            aria-label="New tab"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

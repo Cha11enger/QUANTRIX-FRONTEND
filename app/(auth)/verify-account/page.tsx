@@ -128,7 +128,7 @@ export default function VerifyAccountPage() {
     }
   };
 
-  const handleRemoveStoredAccount = (accountIdentifier: string, event: React.MouseEvent) => {
+  const handleRemoveStoredAccount = (accountIdentifier: string, event: React.MouseEvent | React.KeyboardEvent) => {
     event.stopPropagation();
     AuthService.removeStoredAccount(accountIdentifier);
     setStoredAccounts(prev => prev.filter(acc => acc.accountIdentifier !== accountIdentifier));
@@ -136,39 +136,39 @@ export default function VerifyAccountPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gray-900">
-      <div className="max-w-md w-full space-y-8">
+      <div className="max-w-sm w-full mx-auto space-y-6">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-4">
-            <Database className="h-8 w-8 text-white" />
+          <div className="mx-auto h-10 w-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-3">
+            <Database className="h-5 w-5 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Account Verification</h2>
-          <p className="text-gray-400">
+          <h2 className="text-lg font-bold text-white mb-1">Account Verification</h2>
+          <p className="text-xs text-gray-400">
             Enter your account identifier or account URL
           </p>
         </div>
 
         {/* Form */}
-        <div className="bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-700">
+        <div className="bg-gray-800 p-4 rounded-2xl shadow-xl border border-gray-700">
           {/* Stored Accounts Section */}
           {storedAccounts.length > 0 && (
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-white mb-4">Select an account to sign into</h3>
-              <div className="space-y-3">
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-white mb-3">Select an account to sign into</h3>
+              <div className="space-y-2">
                 {storedAccounts.map((account) => (
                   <button
                     key={account.accountIdentifier}
                     type="button"
                     onClick={() => handleStoredAccountSelect(account)}
                     disabled={loadingAccountId === account.accountIdentifier}
-                    className="w-full p-4 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg transition-all duration-200 group relative"
+                    className="w-full p-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-md transition-all duration-200 group relative"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1 text-left">
-                        <div className="text-white font-medium text-lg">
+                        <div className="text-white font-medium text-sm">
                           {account.accountIdentifier}
                         </div>
-                        <div className="text-gray-400 text-sm">
+                        <div className="text-gray-400 text-xs">
                           {account.organizationName}
                         </div>
                         <div className="flex items-center gap-1 text-gray-500 text-xs mt-1">
@@ -178,7 +178,7 @@ export default function VerifyAccountPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {loadingAccountId === account.accountIdentifier ? (
-                          <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                          <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />
                         ) : (
                           <div
                             onClick={(e) => handleRemoveStoredAccount(account.accountIdentifier, e)}
@@ -193,7 +193,7 @@ export default function VerifyAccountPage() {
                               }
                             }}
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3 h-3" />
                           </div>
                         )}
                       </div>
@@ -202,17 +202,17 @@ export default function VerifyAccountPage() {
                 ))}
               </div>
               
-              <div className="mt-6 flex items-center">
+              <div className="mt-4 flex items-center">
                 <div className="flex-1 border-t border-gray-600"></div>
-                <span className="px-4 text-gray-400 text-sm">Or enter manually</span>
+                <span className="px-3 text-gray-400 text-xs">Or enter manually</span>
                 <div className="flex-1 border-t border-gray-600"></div>
               </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
             <div>
-              <label htmlFor="accountIdentifier" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="accountIdentifier" className="block text-xs font-medium text-gray-300 mb-2">
                 Account identifier
               </label>
               <input
@@ -220,26 +220,26 @@ export default function VerifyAccountPage() {
                 type="text"
                 autoComplete="username"
                 className={`
-                  w-full px-4 py-3 border rounded-lg bg-gray-700 
-                  text-white placeholder-gray-400 focus:outline-none 
+                  w-full px-2 py-1.5 border rounded-md bg-gray-700 
+                  text-xs text-white placeholder-gray-400 focus:outline-none 
                   focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200
                   ${errors.accountIdentifier ? 'border-red-500' : 'border-gray-600'}
                 `}
                 placeholder="Account identifier"
               />
               {errors.accountIdentifier && (
-                <p className="mt-1 text-sm text-red-400">{errors.accountIdentifier.message}</p>
+                <p className="mt-1 text-xs text-red-400">{errors.accountIdentifier.message}</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center items-center px-4 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex justify-center items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
+                  <Loader2 className="animate-spin -ml-1 mr-2 h-3 w-3" />
                   Verifying...
                 </>
               ) : (
@@ -250,27 +250,27 @@ export default function VerifyAccountPage() {
             <button
               type="button"
               onClick={() => router.push('/signup')}
-              className="w-full flex justify-center items-center px-4 py-3 border border-gray-600 text-base font-medium rounded-lg text-gray-300 bg-transparent hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all duration-200"
+              className="w-full flex justify-center items-center px-2.5 py-1.5 border border-gray-600 text-xs font-medium rounded-md text-gray-300 bg-transparent hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all duration-200"
             >
               Sign up
             </button>
           </form>
 
           {/* Help Section */}
-          <div className="mt-6">
+          <div className="mt-4">
             <button
               onClick={() => setShowHelp(!showHelp)}
-              className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 transition-colors"
+              className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-300 transition-colors"
             >
-              <HelpCircle className="w-4 h-4" />
+              <HelpCircle className="w-3 h-3" />
               Where to find your account identifier
             </button>
             
             {showHelp && (
-              <div className="mt-3 p-4 bg-gray-700 rounded-lg border border-gray-600">
-                <div className="text-sm text-gray-300">
+              <div className="mt-3 p-2 bg-gray-700 rounded-lg border border-gray-600">
+                <div className="text-xs text-gray-300">
                   <p className="font-medium text-white mb-2">Account identifier format:</p>
-                  <div className="bg-gray-800 p-3 rounded border border-gray-600 font-mono text-xs text-gray-300">
+                  <div className="bg-gray-800 p-2 rounded border border-gray-600 font-mono text-[11px] text-gray-300">
                     https://&lt;account_identifier&gt;.snowflakecomputing.com
                   </div>
                   <p className="mt-2 text-xs text-gray-400">

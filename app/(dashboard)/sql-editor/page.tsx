@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { mockQueryResults } from '@/lib/data';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { FileText, Plus } from 'lucide-react';
 import Editor from '@monaco-editor/react';
-import { SQLEditorHeader } from '@/components/sql-editor/SQLEditorHeader';
+// Removed header per request
 import { SQLEditorTabs } from '@/components/sql-editor/SQLEditorTabs';
 import { SQLEditorResults } from '@/components/sql-editor/SQLEditorResults';
 
@@ -19,7 +19,8 @@ export default function SQLEditorPage() {
     removeSqlTab, 
     updateSqlTab,
     openTabs,
-    deleteWorksheet
+    deleteWorksheet,
+    activeConnection
   } = useAppStore();
   
   const [isExecuting, setIsExecuting] = useState(false);
@@ -29,10 +30,12 @@ export default function SQLEditorPage() {
 
   // Bottom panel state
   const [bottomPanelCollapsed, setBottomPanelCollapsed] = useState(true);
+  const editorRef = useRef<any>(null);
+  const [cursorPos, setCursorPos] = useState<{ line: number; col: number }>({ line: 1, col: 1 });
 
   const activeTab = sqlEditorTabs.find(tab => tab.id === activeSqlTab);
 
-  const handleExecuteQuery = async () => {
+  const handleExecuteQuery = async (mode?: 'run' | 'runSelected' | 'runAll') => {
     if (!activeTab?.content.trim()) return;
     
     setIsExecuting(true);
@@ -44,8 +47,17 @@ export default function SQLEditorPage() {
     const endTime = Date.now();
     const execTime = (endTime - startTime) / 1000;
     
+    const editor = editorRef.current;
+    let text = activeTab.content;
+    if (editor && mode === 'runSelected') {
+      const sel = editor.getSelection();
+      if (sel) {
+        text = editor.getModel()?.getValueInRange(sel) || text;
+      }
+    }
     // Mock results based on query content
-    const results = mockQueryResults['select * from customers limit 5'] || {
+    const key = text.trim().toLowerCase();
+    const results = mockQueryResults[key] || {
       columns: ['ID', 'NAME', 'EMAIL'],
       rows: [
         { ID: '1', NAME: 'John Doe', EMAIL: 'john@example.com' },
@@ -106,12 +118,7 @@ export default function SQLEditorPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <SQLEditorHeader
-        onExecuteQuery={handleExecuteQuery}
-        isExecuting={isExecuting}
-        activeTab={activeTab}
-      />
+      
 
       {/* Tabs */}
       <SQLEditorTabs
@@ -158,6 +165,10 @@ export default function SQLEditorPage() {
                     value={activeTab?.content || ''}
                     onChange={handleEditorChange}
                     onMount={(editor) => {
+                      editorRef.current = editor;
+                      editor.onDidChangeCursorPosition((e: any) => {
+                        setCursorPos({ line: e.position.lineNumber, col: e.position.column });
+                      });
                     }}
                     theme="vs-dark"
                     options={{
@@ -201,6 +212,19 @@ export default function SQLEditorPage() {
                 setBottomPanelCollapsed={setBottomPanelCollapsed}
               />
             )}
+            <div className="flex-shrink-0 h-8 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-3 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-3">
+                <span className="text-gray-600 dark:text-gray-300">Ln {cursorPos.line}, Col {cursorPos.col}</span>
+                <span className="text-gray-500 dark:text-gray-400">Spaces: 2</span>
+                <span className="text-gray-500 dark:text-gray-400">SQL</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+                {activeConnection && <span>Conn: {activeConnection}</span>}
+                {queryResults && (
+                  <span>{queryResults.rowCount} rows • {executionTime?.toFixed(2)}s</span>
+                )}
+              </div>
+            </div>
           </>
         )}
       </div>

@@ -8,11 +8,12 @@ import {
   Save,
   Settings,
   Database,
-  ChevronDown
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 
 interface SQLEditorHeaderProps {
-  onExecuteQuery: () => void;
+  onExecuteQuery: (mode?: 'run' | 'runSelected' | 'runAll') => void;
   isExecuting: boolean;
   activeTab: any;
 }
@@ -20,6 +21,7 @@ interface SQLEditorHeaderProps {
 export function SQLEditorHeader({ onExecuteQuery, isExecuting, activeTab }: SQLEditorHeaderProps) {
   const { activeConnection, setActiveConnection } = useAppStore();
   const [showConnectionDropdown, setShowConnectionDropdown] = useState(false);
+  const [showRunMenu, setShowRunMenu] = useState(false);
   const [showContextDropdowns, setShowContextDropdowns] = useState({
     role: false,
     warehouse: false,
@@ -136,19 +138,58 @@ export function SQLEditorHeader({ onExecuteQuery, isExecuting, activeTab }: SQLE
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={onExecuteQuery}
-            disabled={isExecuting || !activeTab?.content.trim()}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Play className="w-4 h-4" />
-            {isExecuting ? 'Executing...' : 'Run'}
-          </button>
-          
+          <div className="relative">
+            <button
+              data-dropdown-button
+              onClick={(e) => {
+                e.stopPropagation();
+                onExecuteQuery('run');
+              }}
+              disabled={isExecuting || !activeTab?.content.trim()}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-l-lg hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Play className="w-4 h-4" />
+              {isExecuting ? 'Executing...' : 'Run'}
+            </button>
+            <button
+              data-dropdown-button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowRunMenu(!showRunMenu);
+              }}
+              disabled={isExecuting || !activeTab?.content.trim()}
+              className="px-2 py-2 bg-green-600 text-white rounded-r-lg hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {showRunMenu && (
+              <div data-dropdown-menu className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-20">
+                <div className="p-1">
+                  <button
+                    onClick={() => { setShowRunMenu(false); onExecuteQuery('run'); }}
+                    className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600"
+                  >
+                    Run
+                  </button>
+                  <button
+                    onClick={() => { setShowRunMenu(false); onExecuteQuery('runSelected'); }}
+                    className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600"
+                  >
+                    Run Selected
+                  </button>
+                  <button
+                    onClick={() => { setShowRunMenu(false); onExecuteQuery('runAll'); }}
+                    className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-600"
+                  >
+                    Run All Statements
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           <button className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
             <Save className="w-4 h-4" />
           </button>
-          
           <button className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
             <Settings className="w-4 h-4" />
           </button>
