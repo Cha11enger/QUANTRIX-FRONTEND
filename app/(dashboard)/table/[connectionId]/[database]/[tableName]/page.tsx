@@ -333,7 +333,7 @@ export default function TableDataPage() {
             
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                let pageNum;
+                let pageNum: number;
                 if (totalPages <= 7) {
                   pageNum = i + 1;
                 } else {

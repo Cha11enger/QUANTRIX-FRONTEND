@@ -82,7 +82,7 @@ This query joins customers with their orders and calculates the total value for 
     
     if (lowerQuestion.includes('table') || lowerQuestion.includes('schema')) {
       const tables = connection?.schema?.tables || [];
-      const tableList = tables.map(t => `- **${t.name}**: ${t.columns?.length || 0} columns`).join('\n');
+      const tableList = tables.map((t: any) => `- **${t.name}**: ${t.columns?.length || 0} columns`).join('\n');
       
       return `Here are the available tables in your ${connection?.name || 'database'}:
 

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SettingsLayout } from '@/components/settings/SettingsLayout';
 import { RolesManagement } from '@/components/settings/RolesManagement';
 import { UserManagement } from '@/components/settings/UserManagement';
+import { AuthService } from '@/lib/api';
 import { ProfileSettings } from '@/components/settings/ProfileSettings';
 import { SecuritySettings } from '@/components/settings/SecuritySettings';
 
@@ -91,6 +92,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
   const [roles, setRoles] = useState(mockRoles);
   const [users, setUsers] = useState(mockUsers);
+  const [formError, setFormError] = useState<string | null>(null);
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -99,7 +101,8 @@ export default function SettingsPage() {
     avatar: '',
     company: '',
     location: '',
-    website: ''
+    website: '',
+    fullName: ''
   });
 
   // Role management handlers
@@ -128,57 +131,119 @@ export default function SettingsPage() {
   };
 
   // User management handlers
-  const handleCreateUser = (userData: any) => {
-    const newUser = {
-      ...userData,
-      id: `user-${Date.now()}`,
-      createdAt: new Date().toISOString()
-    };
-    setUsers([...users, newUser]);
-    
-    // Update role user counts
-    userData.roles.forEach((roleId: string) => {
-      setRoles(roles.map(role => 
-        role.id === roleId 
-          ? { ...role, userCount: role.userCount + 1 }
-          : role
-      ));
-    });
+  const handleCreateUser = async (userData: any): Promise<boolean> => {
+    const emailPart = String(userData.email || '').split('@')[0];
+    const baseUsername = emailPart || String(userData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 30) || `user${Date.now()}`;
+    const firstName = String(userData.name || '').split(' ')[0] || '';
+    const lastName = String(userData.name || '').split(' ').slice(1).join(' ') || '';
+    try {
+      if (!userData.email) {
+        setFormError('Email is required.');
+        return false;
+      }
+      if (!userData.name || String(userData.name).trim().length < 2) {
+        setFormError('Full name is required.');
+        return false;
+      }
+      let selectedRoleName = String(userData.defaultRole || '').trim();
+      if (!selectedRoleName) {
+        const rolesResp = await AuthService.getUserRoles();
+        const systemRoles = rolesResp.systemRoles || [];
+        const preferred = systemRoles.find(r => r.name === 'ACCOUNTUSER') || systemRoles.find(r => r.name === 'ACCOUNTADMIN') || systemRoles[0];
+        selectedRoleName = preferred?.name || 'ACCOUNTADMIN';
+      }
+      if (!selectedRoleName) {
+        setFormError('Default role is required.');
+        return false;
+      }
+
+      const result = await AuthService.createOrgUser({
+        username: baseUsername,
+        email: userData.email,
+        defaultRole: selectedRoleName,
+        password: userData.inviteMode ? undefined : userData.password,
+        confirmPassword: userData.inviteMode ? undefined : userData.confirmPassword,
+        firstName: firstName || 'Invited',
+        lastName: lastName || 'User'
+      });
+
+      const newUser = {
+        id: result.user.id,
+        name: `${firstName} ${lastName}`.trim() || baseUsername,
+        email: result.user.email,
+        status: (userData.inviteMode || result.inviteMode) ? 'pending' as const : 'active' as const,
+        roles: [selectedRoleName],
+        avatar: '',
+        lastLogin: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+      setUsers([...users, newUser]);
+      setFormError(null);
+      return true;
+    } catch (e: any) {
+      const message = e?.message || 'Failed to create user';
+      setFormError(message);
+      return false;
+    }
   };
 
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const rolesResp = await AuthService.getUserRoles();
+        const system = rolesResp.systemRoles || [];
+        const sysMapped = system.map(r => ({
+          id: r.id,
+          name: r.name,
+          description: r.description || '',
+          permissions: [],
+          isSystem: true,
+          userCount: 0
+        }));
+        const custom = rolesResp.customRoles || [];
+        const customMapped = custom.map(cr => ({
+          id: cr.id,
+          name: cr.name,
+          description: cr.description || '',
+          permissions: [],
+          isSystem: false,
+          userCount: 0
+        }));
+        setRoles([...(sysMapped as any), ...(customMapped as any)] as any);
+      } catch {}
+      try {
+        const orgUsers = await AuthService.getOrgUsers();
+        const mapped = orgUsers.map(u => ({
+          id: u.id,
+          name: u.fullName || u.email,
+          email: u.email,
+          status: u.status,
+          roles: u.roles,
+          lastLogin: u.lastLogin || new Date().toISOString(),
+          createdAt: u.createdAt
+        }));
+        setUsers(mapped as any);
+      } catch {}
+    };
+    loadData();
+  }, []);
+
   const handleUpdateUser = (id: string, userData: any) => {
-    const oldUser = users.find(user => user.id === id);
-    setUsers(users.map(user => 
-      user.id === id ? { ...user, ...userData } : user
-    ));
-    
-    // Update role user counts if roles changed
-    if (oldUser && userData.roles) {
-      const oldRoles = oldUser.roles;
-      const newRoles = userData.roles;
-      
-      // Decrease count for removed roles
-      oldRoles.forEach((roleId: string) => {
-        if (!newRoles.includes(roleId)) {
-          setRoles(roles.map(role => 
-            role.id === roleId 
-              ? { ...role, userCount: Math.max(0, role.userCount - 1) }
-              : role
-          ));
-        }
+    const fullName = String(userData.name || '').trim();
+    const email = userData.email;
+    const status = userData.status;
+    const defaultRole = userData.defaultRole;
+
+    AuthService.updateOrgUser(id, { fullName, email, status, defaultRole })
+      .then(() => {
+        setUsers(users.map(user => 
+          user.id === id ? { ...user, name: fullName || user.name, email: email || user.email, status: status || user.status } : user
+        ));
+        setFormError(null);
+      })
+      .catch((e: any) => {
+        setFormError(e?.message || 'Failed to update user');
       });
-      
-      // Increase count for added roles
-      newRoles.forEach((roleId: string) => {
-        if (!oldRoles.includes(roleId)) {
-          setRoles(roles.map(role => 
-            role.id === roleId 
-              ? { ...role, userCount: role.userCount + 1 }
-              : role
-          ));
-        }
-      });
-    }
   };
 
   const handleDeleteUser = (id: string) => {
@@ -244,6 +309,8 @@ export default function SettingsPage() {
             onCreateUser={handleCreateUser}
             onUpdateUser={handleUpdateUser}
             onDeleteUser={handleDeleteUser}
+            errorMessage={formError}
+            onClearError={() => setFormError(null)}
           />
         );
       case 'data-privacy':

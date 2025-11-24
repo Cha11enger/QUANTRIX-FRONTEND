@@ -25,12 +25,21 @@ interface Role {
 interface UserManagementProps {
   users: User[];
   roles: Role[];
-  onCreateUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
+  onCreateUser: (payload: {
+    name: string;
+    email: string;
+    defaultRole: string;
+    password?: string;
+    confirmPassword?: string;
+    inviteMode?: boolean;
+  }) => Promise<boolean>;
   onUpdateUser: (id: string, user: Partial<User>) => void;
   onDeleteUser: (id: string) => void;
+  errorMessage?: string | null;
+  onClearError?: () => void;
 }
 
-export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDeleteUser }: UserManagementProps) {
+export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDeleteUser, errorMessage, onClearError }: UserManagementProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -39,17 +48,45 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
     email: '',
     status: 'active' as const,
     roles: [] as string[],
+    defaultRole: '',
+    password: '',
+    confirmPassword: '',
     lastLogin: new Date().toISOString()
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingUser) {
       onUpdateUser(editingUser.id, formData);
     } else {
-      onCreateUser(formData);
+      const ok = await onCreateUser({
+        name: formData.name,
+        email: formData.email,
+        defaultRole: formData.defaultRole,
+        password: formData.password || undefined,
+        confirmPassword: formData.confirmPassword || undefined,
+        inviteMode: false
+      });
+      if (ok) {
+        resetForm();
+      }
     }
-    resetForm();
+  };
+
+  const handleInvite = async () => {
+    if (editingUser) {
+      onUpdateUser(editingUser.id, { name: formData.name, email: formData.email });
+    } else {
+      const ok = await onCreateUser({
+        name: formData.name,
+        email: formData.email,
+        defaultRole: formData.defaultRole,
+        inviteMode: true
+      });
+      if (ok) {
+        resetForm();
+      }
+    }
   };
 
   const resetForm = () => {
@@ -58,10 +95,14 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
       email: '',
       status: 'active',
       roles: [],
+      defaultRole: '',
+      password: '',
+      confirmPassword: '',
       lastLogin: new Date().toISOString()
     });
     setEditingUser(null);
     setShowModal(false);
+    onClearError && onClearError();
   };
 
   const handleEdit = (user: User) => {
@@ -71,6 +112,9 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
       email: user.email,
       status: user.status,
       roles: user.roles,
+      defaultRole: '',
+      password: '',
+      confirmPassword: '',
       lastLogin: user.lastLogin
     });
     setShowModal(true);
@@ -156,13 +200,13 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
           <div className="mb-4">
             <div className="flex flex-wrap gap-1">
               {user.roles.slice(0, 3).map((roleId) => {
-                const role = roles.find(r => r.id === roleId);
+                const role = roles.find(r => r.id === roleId || r.name === roleId);
                 return (
                   <span
                     key={roleId}
                     className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(roleId)}`}
                   >
-                    {role?.name || roleId}
+                    {role?.name || String(roleId)}
                   </span>
                 );
               })}
@@ -235,13 +279,13 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
               <td className="px-6 py-4">
                 <div className="flex flex-wrap gap-1">
                   {user.roles.slice(0, 2).map((roleId) => {
-                    const role = roles.find(r => r.id === roleId);
+                    const role = roles.find(r => r.id === roleId || r.name === roleId);
                     return (
                       <span
                         key={roleId}
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(roleId)}`}
                       >
-                        {role?.name || roleId}
+                        {role?.name || String(roleId)}
                       </span>
                     );
                   })}
@@ -346,6 +390,12 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              {errorMessage ? (
+                <div className="mb-2 p-3 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 flex items-start justify-between">
+                  <span>{errorMessage}</span>
+                  <button type="button" onClick={() => onClearError && onClearError()} className="ml-3 text-sm underline">Dismiss</button>
+                </div>
+              ) : null}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -392,134 +442,47 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Assign Roles (Multiple Selection)
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Default Role
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-64 overflow-y-auto">
-                  {roles.map((role) => {
-                    const isSelected = formData.roles.includes(role.id);
-                    return (
-                      <label
-                        key={role.id}
-                        className={`relative flex flex-col p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 transform hover:scale-105 ${
-                          isSelected
-                            ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 shadow-lg'
-                            : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormData({
-                                    ...formData,
-                                    roles: [...formData.roles, role.id]
-                                  });
-                                } else {
-                                  setFormData({
-                                    ...formData,
-                                    roles: formData.roles.filter(r => r !== role.id)
-                                  });
-                                }
-                              }}
-                              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                            />
-                            <div>
-                              <h4 className={`font-semibold ${
-                                isSelected 
-                                  ? 'text-blue-900 dark:text-blue-100' 
-                                  : 'text-gray-900 dark:text-white'
-                              }`}>
-                                {role.name}
-                              </h4>
-                              {role.isSystem && (
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                                  isSelected
-                                    ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
-                                    : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                }`}>
-                                  System
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          {isSelected && (
-                            <div className="flex-shrink-0">
-                              <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                          )}
-                        </div>
-                        
-                        <p className={`text-sm mb-3 ${
-                          isSelected 
-                            ? 'text-blue-800 dark:text-blue-200' 
-                            : 'text-gray-600 dark:text-gray-400'
-                        }`}>
-                          {role.description}
-                        </p>
-                        
-                        <div className="flex flex-wrap gap-1">
-                          {role.permissions.slice(0, 4).map((permission) => (
-                            <span
-                              key={permission}
-                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                isSelected
-                                  ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
-                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
-                              }`}
-                            >
-                              {permission.replace('_', ' ')}
-                            </span>
-                          ))}
-                          {role.permissions.length > 4 && (
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              isSelected
-                                ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
-                                : 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
-                            }`}>
-                              +{role.permissions.length - 4}
-                            </span>
-                          )}
-                        </div>
-                      </label>
-                    );
-                  })}
+                <select
+                  value={formData.defaultRole}
+                  onChange={(e) => setFormData({ ...formData, defaultRole: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Select role</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.name}>{role.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Password (optional)
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter temporary password"
+                  />
                 </div>
-                
-                {/* Selected Roles Summary */}
-                {formData.roles.length > 0 && (
-                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-                      Selected Roles ({formData.roles.length})
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.roles.map((roleId) => {
-                        const role = roles.find(r => r.id === roleId);
-                        return (
-                          <span
-                            key={roleId}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full text-sm font-medium"
-                          >
-                            {role?.name}
-                            <button
-                              type="button"
-                              onClick={() => setFormData({
-                                ...formData,
-                                roles: formData.roles.filter(r => r !== roleId)
-                              })}
-                              className="ml-1 hover:bg-blue-200 dark:hover:bg-blue-700 rounded-full p-0.5 transition-colors"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Confirm Password (optional)
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Confirm temporary password"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center gap-3 pt-4">
@@ -529,6 +492,13 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
                   className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleInvite}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Invite User
                 </button>
                 <button
                   type="submit"
