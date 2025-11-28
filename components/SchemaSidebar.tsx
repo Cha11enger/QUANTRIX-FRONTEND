@@ -8,7 +8,7 @@ import { DatabaseTree } from '@/components/schema/DatabaseTree';
 
 export function SchemaSidebar() {
   const pathname = usePathname();
-  const { activeConnection, setActiveConnection, setSchemaSidebarOpen, sqlEditorTabs, activeSqlTab, addSqlTab, setActiveSqlTab, openTabs, deleteWorksheet } = useAppStore();
+  const { activeConnection, setActiveConnection, setSchemaSidebarOpen, sqlEditorTabs, activeSqlTab, addSqlTab, setActiveSqlTab, openTabs, deleteWorksheet, activeProjectId, setActiveProject, projects } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'databases' | 'worksheets'>('databases');
 
@@ -24,6 +24,8 @@ export function SchemaSidebar() {
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const projectDropdownRef = useRef<HTMLDivElement>(null);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   
   // Add new item states
   const [showAddNewDropdown, setShowAddNewDropdown] = useState(false);
@@ -67,6 +69,9 @@ export function SchemaSidebar() {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowWorkspaceDropdown(false);
+      }
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(event.target as Node)) {
+        setShowProjectDropdown(false);
       }
       if (addNewDropdownRef.current && !addNewDropdownRef.current.contains(event.target as Node)) {
         setShowAddNewDropdown(false);
@@ -504,8 +509,8 @@ export function SchemaSidebar() {
     <div className="h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        {/* Workspace Dropdown: only show in SQL Editor */}
-        {pathname === '/sql-editor' && (
+        {/* Workspace Dropdown: only show in SQL Editor and Worksheets tab */}
+        {pathname === '/sql-editor' && activeTab === 'worksheets' && (
           <div className="relative mb-3" ref={dropdownRef}>
             <button
               onClick={() => setShowWorkspaceDropdown(!showWorkspaceDropdown)}
@@ -594,9 +599,58 @@ export function SchemaSidebar() {
         )}
 
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-            {pathname === '/sql-editor' ? 'Workspace' : 'Schema'}
-          </h2>
+          {activeTab === 'databases' && (
+            <div className="flex items-center gap-2">
+              <div className="relative" ref={projectDropdownRef}>
+                <button
+                  onClick={() => setShowProjectDropdown(!showProjectDropdown)}
+                  className="w-full flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors group"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FolderOpen className="w-4 h-4 text-gray-600 dark:text-gray-300 flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {activeProjectId ? (projects.find(p=>p.id===activeProjectId)?.name) : 'Select Project'}
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${showProjectDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                {showProjectDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-20 py-1">
+                    <div className="px-3 py-1">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Projects</span>
+                    </div>
+                    {projects.length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">No projects yet. Create one in Projects.</div>
+                    ) : (
+                      projects.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => { setActiveProject(p.id); setShowProjectDropdown(false); }}
+                          className={`w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors group ${activeProjectId===p.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <FolderOpen className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                            <span className="text-sm text-gray-900 dark:text-white">{p.name}</span>
+                          </div>
+                          {activeProjectId===p.id && <Check className="w-3 h-3 text-blue-600 dark:text-blue-400" />}
+                        </button>
+                      ))
+                    )}
+                    <div className="border-t border-gray-200 dark:border-gray-600 my-1"></div>
+                    <button
+                      onClick={() => { setActiveProject(null); setShowProjectDropdown(false); }}
+                      className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FolderOpen className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                        <span className="text-sm text-gray-900 dark:text-white">Show all connections</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           <div className="flex items-center gap-1">
             <button
               onClick={() => {/* Refresh schema */}}

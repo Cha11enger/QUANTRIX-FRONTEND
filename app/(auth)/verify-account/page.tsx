@@ -35,6 +35,7 @@ export default function VerifyAccountPage() {
     // Load stored accounts on component mount
     const accounts = AuthService.getStoredAccounts();
     setStoredAccounts(accounts);
+    router.prefetch('/login');
   }, []);
 
   const onSubmit = async (data: VerifyAccountFormData) => {
@@ -58,7 +59,7 @@ export default function VerifyAccountPage() {
         AuthService.saveStoredAccount(storedAccount);
         
         // Redirect to login page
-        router.push('/login');
+        router.replace('/login');
       } else {
         setError('accountIdentifier', { message: 'Account identifier is not valid' });
       }
@@ -107,7 +108,7 @@ export default function VerifyAccountPage() {
         AuthService.setAccountIdentifier(account.accountIdentifier);
         
         // Redirect to login page
-        router.push('/login');
+        router.replace('/login');
       } else {
         // Remove invalid account from storage
         AuthService.removeStoredAccount(account.accountIdentifier);
@@ -135,7 +136,7 @@ export default function VerifyAccountPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-900">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-black">
       <div className="max-w-sm w-full mx-auto space-y-6">
         {/* Header */}
         <div className="text-center">

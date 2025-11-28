@@ -3,6 +3,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore, useAppStore } from '@/lib/store';
+import { AuthService } from '@/lib/api';
 import { IconSidebar } from './IconSidebar';
 import { SchemaSidebar } from './SchemaSidebar';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
@@ -15,7 +16,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user, updateProfile } = useAuthStore();
   const { schemaSidebarOpen, schemaSidebarWidth, setSchemaSidebarWidth, setSchemaSidebarOpen, sqlEditorTabs, openTabs } = useAppStore();
   const [mounted, setMounted] = useState(false);
   const [toggleButtonPosition, setToggleButtonPosition] = useState(() => {
@@ -86,6 +87,22 @@ export function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted || !isAuthenticated) return;
+    const current = user?.avatar || '';
+    const isMock = !current || current.includes('pexels');
+    if (!isMock) return;
+    let active = true;
+    AuthService.getProfile()
+      .then((p) => {
+        if (!active) return;
+        const url = p.profilePictureUrl;
+        if (url) updateProfile({ avatar: url });
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [mounted, isAuthenticated, user?.avatar]);
 
   useEffect(() => {
     if (isDragging) {

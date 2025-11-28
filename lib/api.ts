@@ -194,11 +194,11 @@ class ApiClient {
             }
           }
           
-          throw new ApiError(
-            status,
-            data?.error || 'An error occurred',
-            data?.details
-          );
+          const details: any = (data as any)?.details;
+          const validationErrorsArray = Array.isArray(details?.errors) ? details.errors : (Array.isArray(details?.validation_errors) ? details.validation_errors.map((v: any) => v.message) : undefined);
+          const validationErrorsJoined = Array.isArray(validationErrorsArray) && validationErrorsArray.length > 0 ? validationErrorsArray.join('; ') : undefined;
+          const message = (data as any)?.error || (data as any)?.message || validationErrorsJoined || 'An error occurred';
+          throw new ApiError(status, message, details);
         } else if (error.request) {
           throw new ApiError(0, 'Network error - please check your connection');
         } else {
@@ -396,21 +396,7 @@ class ApiClient {
     return normalized;
   }
 
-  async createOrgUser(data: CreateOrgUserRequest): Promise<CreateOrgUserResponse> {
-    const response = await this.client.post<ApiResponse<CreateOrgUserResponse>>(
-      '/api/v1/users/org/users',
-      data
-    );
-    if (!response.data.success || !response.data.data) {
-      throw new ApiError(400, response.data.error || 'Failed to create user', response.data.details);
-    }
-    const payload: any = response.data.data;
-    return {
-      user: payload.user,
-      inviteMode: Boolean(payload.inviteMode),
-      mustChangePassword: Boolean(payload.mustChangePassword)
-    };
-  }
+  // Organization user management APIs removed
 
   async updateProfile(data: UpdateProfileRequest): Promise<UpdateProfileResult> {
     const response = await this.client.patch<ApiResponse<UpdateProfileResult>>(
@@ -471,21 +457,9 @@ class ApiClient {
     return rolesObj as GetUserRolesResponse;
   }
 
-  async getOrgUsers(): Promise<OrgUser[]> {
-    const response = await this.client.get<ApiResponse<OrgUser[]>>('/api/v1/users/org/users');
-    if (!response.data.success || !response.data.data) {
-      throw new ApiError(400, response.data.error || 'Failed to fetch organization users', response.data.details);
-    }
-    return response.data.data;
-  }
+  // Organization user management APIs removed
 
-  async updateOrgUser(userId: string, payload: { fullName?: string; email?: string; status?: 'active' | 'inactive' | 'pending'; defaultRole?: string }): Promise<{ message: string }> {
-    const response = await this.client.patch<ApiResponse<{ message: string }>>(`/api/v1/users/org/users/${userId}`, payload);
-    if (!response.data.success || !response.data.data) {
-      throw new ApiError(400, response.data.error || 'Failed to update user', response.data.details);
-    }
-    return response.data.data;
-  }
+  // Organization user management APIs removed
 
   async changePassword(data: ChangePasswordRequest): Promise<ChangePasswordResponse> {
     const response = await this.client.put<ApiResponse<ChangePasswordResponse>>(
@@ -648,17 +622,11 @@ export class AuthService {
     return apiClient.getRolePermissions(roleId);
   }
 
-  static async getOrgUsers(): Promise<OrgUser[]> {
-    return apiClient.getOrgUsers();
-  }
+  // Organization user management APIs removed
 
-  static async updateOrgUser(userId: string, payload: { fullName?: string; email?: string; status?: 'active' | 'inactive' | 'pending'; defaultRole?: string }): Promise<{ message: string }> {
-    return apiClient.updateOrgUser(userId, payload);
-  }
+  // Organization user management APIs removed
 
-  static async createOrgUser(data: CreateOrgUserRequest): Promise<CreateOrgUserResponse> {
-    return apiClient.createOrgUser(data);
-  }
+  // Organization user management APIs removed
 
   static async switchCurrentRole(roleId: string): Promise<{ current_role_id: string }> {
     return apiClient.switchCurrentRole(roleId);
@@ -849,40 +817,4 @@ export interface RolePermission {
   category: string;
 }
 
-export interface CreateOrgUserRequest {
-  username: string;
-  email: string;
-  defaultRole: string;
-  password?: string;
-  confirmPassword?: string;
-  firstName?: string;
-  lastName?: string;
-  companyName?: string;
-  bio?: string;
-  phone?: string;
-  location?: string;
-  website?: string;
-}
-
-export interface CreateOrgUserResponse {
-  user: {
-    id: string;
-    username: string;
-    email: string;
-    accountIdentifier: string;
-    organizationName: string;
-    accountName: string;
-  };
-  inviteMode: boolean;
-  mustChangePassword: boolean;
-}
-
-export interface OrgUser {
-  id: string;
-  fullName: string;
-  email: string;
-  status: 'active' | 'inactive' | 'pending';
-  roles: string[];
-  lastLogin: string | null;
-  createdAt: string;
-}
+// Organization user management types removed

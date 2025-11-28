@@ -90,7 +90,7 @@ const mockUsers = [
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
-  const [roles, setRoles] = useState(mockRoles);
+  const [roles, setRoles] = useState<any[]>([]);
   const [users, setUsers] = useState(mockUsers);
   const [formError, setFormError] = useState<string | null>(null);
   const [profile, setProfile] = useState({
@@ -132,8 +132,16 @@ export default function SettingsPage() {
 
   // User management handlers
   const handleCreateUser = async (userData: any): Promise<boolean> => {
-    const emailPart = String(userData.email || '').split('@')[0];
-    const baseUsername = emailPart || String(userData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 30) || `user${Date.now()}`;
+    const rawEmailPart = String(userData.email || '').split('@')[0];
+    const sanitizedEmailPart = rawEmailPart.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    let baseUsername = sanitizedEmailPart;
+    if (!baseUsername || baseUsername.length < 3) {
+      const nameSanitized = String(userData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+      baseUsername = nameSanitized || `user${Date.now()}`;
+    }
+    if (baseUsername.length > 30) {
+      baseUsername = baseUsername.slice(0, 30);
+    }
     const firstName = String(userData.name || '').split(' ')[0] || '';
     const lastName = String(userData.name || '').split(' ').slice(1).join(' ') || '';
     try {
@@ -145,27 +153,54 @@ export default function SettingsPage() {
         setFormError('Full name is required.');
         return false;
       }
-      let selectedRoleName = String(userData.defaultRole || '').trim();
-      if (!selectedRoleName) {
-        const rolesResp = await AuthService.getUserRoles();
-        const systemRoles = rolesResp.systemRoles || [];
-        const preferred = systemRoles.find(r => r.name === 'ACCOUNTUSER') || systemRoles.find(r => r.name === 'ACCOUNTADMIN') || systemRoles[0];
-        selectedRoleName = preferred?.name || 'ACCOUNTADMIN';
-      }
+      const selectedRoleName = String(userData.defaultRole || '').trim();
       if (!selectedRoleName) {
         setFormError('Default role is required.');
         return false;
       }
+      if (!roles || roles.length === 0) {
+        setFormError('Roles not loaded yet. Please wait and try again.');
+        return false;
+      }
+      const localValid = roles.some(r => r.name === selectedRoleName);
+      if (!localValid) {
+        setFormError('Select a valid default role.');
+        return false;
+      }
 
-      const result = await AuthService.createOrgUser({
+      let passwordToSend: string | undefined = undefined;
+      let confirmToSend: string | undefined = undefined;
+      const hasPassword = Boolean(userData.password && String(userData.password).trim().length > 0);
+      const hasConfirm = Boolean(userData.confirmPassword && String(userData.confirmPassword).trim().length > 0);
+      if (hasPassword || hasConfirm) {
+        if (!hasPassword || !hasConfirm) {
+          setFormError('Both password and confirm password are required or leave both empty.');
+          return false;
+        }
+        if (String(userData.password) !== String(userData.confirmPassword)) {
+          setFormError('Password and confirm password must match.');
+          return false;
+        }
+        passwordToSend = String(userData.password);
+        confirmToSend = String(userData.confirmPassword);
+      }
+
+      const payloadToSend = {
         username: baseUsername,
         email: userData.email,
         defaultRole: selectedRoleName,
-        password: userData.inviteMode ? undefined : userData.password,
-        confirmPassword: userData.inviteMode ? undefined : userData.confirmPassword,
+        password: passwordToSend,
+        confirmPassword: confirmToSend,
         firstName: firstName || 'Invited',
         lastName: lastName || 'User'
+      };
+      console.log('Creating org user payload', {
+        ...payloadToSend,
+        password: Boolean(passwordToSend),
+        confirmPassword: Boolean(confirmToSend)
       });
+
+      const result = await AuthService.createOrgUser(payloadToSend);
 
       const newUser = {
         id: result.user.id,
@@ -177,11 +212,15 @@ export default function SettingsPage() {
         lastLogin: new Date().toISOString(),
         createdAt: new Date().toISOString()
       };
+      console.log('User created successfully', newUser);
       setUsers([...users, newUser]);
       setFormError(null);
       return true;
     } catch (e: any) {
-      const message = e?.message || 'Failed to create user';
+      console.error('Create user failed', { status: e?.status, message: e?.message, details: e?.details, error: e });
+      const details: any = e?.details;
+      const errorsArr = Array.isArray(details?.errors) ? details.errors : (Array.isArray(details?.validation_errors) ? details.validation_errors.map((v: any) => v.message) : []);
+      const message = (errorsArr[0] || e?.message || 'Failed to create user');
       setFormError(message);
       return false;
     }

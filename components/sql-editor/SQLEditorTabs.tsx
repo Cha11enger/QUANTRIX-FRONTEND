@@ -33,7 +33,7 @@ export function SQLEditorTabs({
   return (
     <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
       <div className="flex items-center relative">
-        <div className="flex items-center overflow-x-auto tabs-scroll tabs-scroll-width">
+        <div className="flex items-center overflow-x-auto tabs-scroll tabs-scroll-width pr-14">
           {openTabsList.map((tab) => (
             <div key={tab.id} className="relative">
               <div
@@ -41,7 +41,7 @@ export function SQLEditorTabs({
                 tabIndex={0}
                 onClick={() => setActiveSqlTab(tab.id)}
                 onContextMenu={(e) => onTabContextMenu(e, tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   activeSqlTab === tab.id
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
                     : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'

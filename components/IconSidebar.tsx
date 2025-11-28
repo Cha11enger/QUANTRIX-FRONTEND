@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Database, Chrome as Home, Code, MessageSquare, Settings, Sun, Moon, LogOut, Menu, X, ChevronDown, ChevronRight, Check, User, Copy } from 'lucide-react';
+import { Database, Chrome as Home, Code, MessageSquare, Settings, Sun, Moon, LogOut, Menu, X, ChevronDown, ChevronRight, Check, User, Copy, FolderOpen } from 'lucide-react';
 import { useAuthStore, useAppStore } from '@/lib/store';
 import { mockConnections } from '@/lib/data';
 import { AuthService, ProfileResponse } from '@/lib/api';
@@ -26,6 +26,7 @@ import {
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Connections', href: '/connections', icon: Database },
+  { name: 'Projects', href: '/projects', icon: FolderOpen },
   { name: 'SQL Editor', href: '/sql-editor', icon: Code },
   { name: 'AI Chat', href: '/ai-chat', icon: MessageSquare },
 ];

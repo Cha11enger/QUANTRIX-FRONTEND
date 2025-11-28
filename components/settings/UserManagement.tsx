@@ -456,6 +456,9 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
                     <option key={role.id} value={role.name}>{role.name}</option>
                   ))}
                 </select>
+                {!formData.defaultRole && (
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">Default role is required</p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

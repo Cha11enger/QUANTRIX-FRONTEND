@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npx kill-port 3000 && cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev\" \"npx stagewise@latest -b\"",
-    "dev:all": "concurrently \"npx kill-port 3000 && cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev\" \"npx stagewise@latest -b\"",
+    "dev": "concurrently \"npx kill-port 3000 && cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev\" \"npx kill-port 3100 && npx stagewise@latest -b\"",
+    "dev:all": "concurrently \"npx kill-port 3000 && cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev\" \"npx kill-port 3100 && npx stagewise@latest -b\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

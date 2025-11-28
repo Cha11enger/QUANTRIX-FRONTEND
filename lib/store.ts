@@ -24,6 +24,8 @@ interface AppState {
   schemaSidebarOpen: boolean;
   schemaSidebarWidth: number;
   rolesRefreshTick: number;
+  projects: Array<{ id: string; name: string; connectionIds: string[] }>;
+  activeProjectId: string | null;
   sqlEditorTabs: Array<{
     id: string;
     name: string;
@@ -33,6 +35,10 @@ interface AppState {
   openTabs: string[]; // Array of tab IDs that are currently open
   activeSqlTab: string;
   chatMessages: ChatMessage[];
+  createProject: (name: string, connectionIds: string[]) => string;
+  updateProject: (id: string, data: Partial<{ name: string; connectionIds: string[] }>) => void;
+  deleteProject: (id: string) => void;
+  setActiveProject: (id: string | null) => void;
   setActiveConnection: (id: string | null) => void;
   setCurrentRole: (role: string) => void;
   bumpRolesRefresh: () => void;
@@ -62,7 +68,7 @@ export const useAuthStore = create<AuthState>()(
               id: userData.id || userData.userId || '1',
               name: userData.username || userData.name || email.split('@')[0],
               email: userData.email || email,
-              avatar: userData.avatar || 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face'
+              avatar: userData.avatar || userData.profilePictureUrl || ''
             };
             set({ user, isAuthenticated: true });
             debug.log('Login successful with provided user data', { user });
@@ -75,7 +81,7 @@ export const useAuthStore = create<AuthState>()(
               id: '1',
               name: email.split('@')[0],
               email: email,
-              avatar: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face'
+              avatar: ''
             };
             set({ user, isAuthenticated: true });
             debug.log('Login successful (simulated)', { user });
@@ -117,6 +123,8 @@ export const useAppStore = create<AppState>()(
       rolesRefreshTick: 0,
       schemaSidebarOpen: true,
       schemaSidebarWidth: 300,
+      projects: [],
+      activeProjectId: null,
       sqlEditorTabs: [
         { id: 'tab1', name: new Date().toLocaleDateString('en-US', { 
           year: 'numeric', 
@@ -149,6 +157,30 @@ export const useAppStore = create<AppState>()(
       setSchemaSidebarWidth: (width) => {
         debug.log('Setting schema sidebar width', { width });
         set({ schemaSidebarWidth: width });
+      },
+      createProject: (name, connectionIds) => {
+        const id = `proj-${Date.now()}`;
+        const project = { id, name, connectionIds };
+        debug.log('Creating project', { project });
+        set((state) => ({ projects: [...state.projects, project] }));
+        return id;
+      },
+      updateProject: (id, data) => {
+        debug.log('Updating project', { id, data });
+        set((state) => ({
+          projects: state.projects.map(p => p.id === id ? { ...p, ...data } : p)
+        }));
+      },
+      deleteProject: (id) => {
+        debug.log('Deleting project', { id });
+        set((state) => ({
+          projects: state.projects.filter(p => p.id !== id),
+          activeProjectId: state.activeProjectId === id ? null : state.activeProjectId
+        }));
+      },
+      setActiveProject: (id) => {
+        debug.log('Setting active project', { id });
+        set({ activeProjectId: id });
       },
       addSqlTab: (tab) => {
         const now = new Date();

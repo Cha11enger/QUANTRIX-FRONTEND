@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { mockConnections, databaseIcons } from '@/lib/data';
+import { useAppStore } from '@/lib/store';
 import { ChevronDown, ChevronRight, Database, Table, Columns2 as Columns } from 'lucide-react';
 
 interface TreeNode {
@@ -24,40 +25,44 @@ interface DatabaseTreeProps {
 export function DatabaseTree({ searchTerm, activeConnection, setActiveConnection }: DatabaseTreeProps) {
   const router = useRouter();
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const { activeProjectId, projects } = useAppStore();
 
   const treeData = useMemo(() => {
     const buildTree = (): TreeNode[] => {
-      return mockConnections.map(conn => {
-        const connectionNode: TreeNode = {
-          id: conn.id,
-          name: conn.name,
-          type: 'connection',
-          connectionId: conn.id,
-          meta: { status: conn.status, type: conn.type },
-          children: conn.schema.databases.map(db => ({
-            id: `${conn.id}-${db}`,
-            name: db,
-            type: 'database',
+      const allowedIds = activeProjectId ? (projects.find(p => p.id === activeProjectId)?.connectionIds || []) : undefined;
+      return mockConnections
+        .filter(conn => !allowedIds || allowedIds.includes(conn.id))
+        .map(conn => {
+          const connectionNode: TreeNode = {
+            id: conn.id,
+            name: conn.name,
+            type: 'connection',
             connectionId: conn.id,
-            children: conn.schema.tables
-              .filter(table => table.database === db)
-              .map(table => ({
-                id: `${conn.id}-${db}-${table.name}`,
-                name: table.name,
-                type: 'table',
-                connectionId: conn.id,
-                children: table.columns.map(col => ({
-                  id: `${conn.id}-${db}-${table.name}-${col.name}`,
-                  name: col.name,
-                  type: 'column',
+            meta: { status: conn.status, type: conn.type },
+            children: conn.schema.databases.map(db => ({
+              id: `${conn.id}-${db}`,
+              name: db,
+              type: 'database',
+              connectionId: conn.id,
+              children: conn.schema.tables
+                .filter(table => table.database === db)
+                .map(table => ({
+                  id: `${conn.id}-${db}-${table.name}`,
+                  name: table.name,
+                  type: 'table',
                   connectionId: conn.id,
-                  meta: { type: col.type, nullable: col.nullable }
+                  children: table.columns.map(col => ({
+                    id: `${conn.id}-${db}-${table.name}-${col.name}`,
+                    name: col.name,
+                    type: 'column',
+                    connectionId: conn.id,
+                    meta: { type: col.type, nullable: col.nullable }
+                  }))
                 }))
-              }))
-          }))
-        };
-        return connectionNode;
-      });
+            }))
+          };
+          return connectionNode;
+        });
     };
 
     const filterTree = (nodes: TreeNode[], term: string): TreeNode[] => {
@@ -80,7 +85,7 @@ export function DatabaseTree({ searchTerm, activeConnection, setActiveConnection
 
     const tree = buildTree();
     return searchTerm ? filterTree(tree, searchTerm) : tree;
-  }, [searchTerm]);
+  }, [searchTerm, activeProjectId, projects]);
 
   const toggleNode = (nodeId: string) => {
     const newExpanded = new Set(expandedNodes);
