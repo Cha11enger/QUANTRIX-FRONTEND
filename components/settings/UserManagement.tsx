@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, CreditCard as Edit, Trash2, User, Grid3x3 as Grid3X3, List, X, Check } from 'lucide-react';
 
 interface User {
@@ -21,6 +21,17 @@ interface Role {
   permissions: string[];
   isSystem: boolean;
 }
+
+type FormState = {
+  name: string;
+  email: string;
+  status: User['status'];
+  roles: string[];
+  defaultRole: string;
+  password: string;
+  confirmPassword: string;
+  lastLogin: string;
+};
 
 interface UserManagementProps {
   users: User[];
@@ -43,16 +54,29 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormState>({
     name: '',
     email: '',
-    status: 'active' as const,
-    roles: [] as string[],
+    status: 'active',
+    roles: [],
     defaultRole: '',
     password: '',
     confirmPassword: '',
     lastLogin: new Date().toISOString()
   });
+  const [autoMode, setAutoMode] = useState(true);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const applyMode = () => {
+      if (autoMode) {
+        setViewMode(mql.matches ? 'table' : 'grid');
+      }
+    };
+    applyMode();
+    mql.addEventListener('change', applyMode);
+    return () => mql.removeEventListener('change', applyMode);
+  }, [autoMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,8 +252,8 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
   );
 
   const renderTableView = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <table className="w-full">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-x-auto">
+      <table className="min-w-[720px] w-full">
         <thead className="bg-gray-50 dark:bg-gray-700">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -336,7 +360,7 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
           {/* View Toggle */}
           <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
             <button
-              onClick={() => setViewMode('grid')}
+              onClick={() => { setAutoMode(false); setViewMode('grid'); }}
               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 viewMode === 'grid'
                   ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
@@ -347,7 +371,7 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
               Grid
             </button>
             <button
-              onClick={() => setViewMode('table')}
+              onClick={() => { setAutoMode(false); setViewMode('table'); }}
               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 viewMode === 'table'
                   ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
@@ -432,7 +456,7 @@ export function UserManagement({ users, roles, onCreateUser, onUpdateUser, onDel
                 </label>
                 <select
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as User['status'] })}
                   className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="active">Active</option>
