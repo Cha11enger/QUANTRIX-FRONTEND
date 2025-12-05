@@ -75,6 +75,7 @@ export interface LoginResponse {
   };
   expiresIn: number;
   mustChangePassword?: boolean;
+  organizationId?: string;
 }
 
 // Profile Types
@@ -263,6 +264,12 @@ class ApiClient {
     // Store tokens
     this.setStoredToken(loginData.token);
     this.setStoredRefreshToken(loginData.refreshToken);
+    try {
+      const orgId = (loginData as any)?.organizationId || (loginData as any)?.user?.organizationId;
+      if (orgId && typeof window !== 'undefined') {
+        localStorage.setItem('organizationId', String(orgId));
+      }
+    } catch {}
     
     return loginData;
   }
@@ -457,7 +464,82 @@ class ApiClient {
     return rolesObj as GetUserRolesResponse;
   }
 
-  // Organization user management APIs removed
+  async getOrgUsers(options?: { page?: number; limit?: number; search?: string; sort?: 'created_at' | 'email' | 'username'; order?: 'asc' | 'desc' }): Promise<{ users: any[]; total: number; page: number; limit: number; pages: number }> {
+    const orgId = typeof window !== 'undefined' ? localStorage.getItem('organizationId') : null;
+    if (!orgId) {
+      throw new ApiError(400, 'Organization ID not found. Please login again.');
+    }
+    const params: any = {};
+    if (options?.page) params.page = options.page;
+    if (options?.limit) params.limit = options.limit;
+    if (options?.search) params.search = options.search;
+    if (options?.sort) params.sort = options.sort;
+    if (options?.order) params.order = options.order;
+    const response = await this.client.get<ApiResponse<any>>(`/api/v1/users/org/${orgId}/users`, { params });
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to fetch organization users', response.data.details);
+    }
+    const payload = response.data.data;
+    const users = Array.isArray(payload?.users) ? payload.users : [];
+    const total = Number(payload?.total ?? users.length);
+    const page = Number(payload?.page ?? 1);
+    const limit = Number(payload?.limit ?? users.length);
+    const pages = Number(payload?.pages ?? 1);
+    return { users, total, page, limit, pages };
+  }
+
+  async createInvitation(input: { organizationId: string; email: string; roleId?: string; roleName?: string }): Promise<{ id: string; token?: string; invitationUrl?: string }> {
+    const response = await this.client.post<ApiResponse<any>>('/api/v1/invitations', input);
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to create invitation', response.data.details);
+    }
+    const data = response.data.data;
+    return { id: String(data.id), token: data.token, invitationUrl: data.invitationUrl };
+  }
+
+  async listInvitations(organizationId: string, status?: string): Promise<any[]> {
+    const params: any = { organizationId };
+    if (status) params.status = status;
+    const response = await this.client.get<ApiResponse<any>>('/api/v1/invitations', { params });
+    if (!response.data.success) {
+      throw new ApiError(400, response.data.error || 'Failed to list invitations', response.data.details);
+    }
+    const list = response.data.data;
+    return Array.isArray(list) ? list : [];
+  }
+
+  async resendInvitation(invitationId: string): Promise<{ token: string }> {
+    const response = await this.client.post<ApiResponse<any>>(`/api/v1/invitations/${invitationId}/resend`);
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to resend invitation', response.data.details);
+    }
+    return { token: String(response.data.data.token || '') };
+  }
+
+  async revokeInvitation(invitationId: string): Promise<{ status: string }> {
+    const response = await this.client.delete<ApiResponse<any>>(`/api/v1/invitations/${invitationId}`);
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to revoke invitation', response.data.details);
+    }
+    return { status: String(response.data.data.status || '') };
+  }
+
+  async updateOrgUser(userId: string, payload: { fullName?: string; email?: string; status?: 'active' | 'inactive' | 'pending'; defaultRole?: string }): Promise<{ updated_at: string }> {
+    const body: any = {};
+    if (payload.fullName && String(payload.fullName).trim().length > 0) {
+      const parts = String(payload.fullName).trim().split(' ');
+      body.first_name = parts[0] || '';
+      body.last_name = parts.slice(1).join(' ') || '';
+    }
+    if (Object.keys(body).length === 0) {
+      body.first_name = '';
+    }
+    const response = await this.client.patch<ApiResponse<any>>(`/api/v1/users/${userId}/profile`, body);
+    if (!response.data.success || !response.data.data) {
+      throw new ApiError(400, response.data.error || 'Failed to update user profile', response.data.details);
+    }
+    return { updated_at: String(response.data.data.updated_at || '') };
+  }
 
   // Organization user management APIs removed
 
@@ -622,7 +704,29 @@ export class AuthService {
     return apiClient.getRolePermissions(roleId);
   }
 
-  // Organization user management APIs removed
+  static async getOrgUsers(options?: { page?: number; limit?: number; search?: string; sort?: 'created_at' | 'email' | 'username'; order?: 'asc' | 'desc' }): Promise<{ users: any[]; total: number; page: number; limit: number; pages: number }> {
+    return apiClient.getOrgUsers(options);
+  }
+
+  static async createInvitation(input: { organizationId: string; email: string; roleId?: string; roleName?: string }): Promise<{ id: string; token?: string; invitationUrl?: string }> {
+    return apiClient.createInvitation(input);
+  }
+
+  static async listInvitations(organizationId: string, status?: string): Promise<any[]> {
+    return apiClient.listInvitations(organizationId, status);
+  }
+
+  static async resendInvitation(invitationId: string): Promise<{ token: string }> {
+    return apiClient.resendInvitation(invitationId);
+  }
+
+  static async revokeInvitation(invitationId: string): Promise<{ status: string }> {
+    return apiClient.revokeInvitation(invitationId);
+  }
+
+  static async updateOrgUser(userId: string, payload: { fullName?: string; email?: string; status?: 'active' | 'inactive' | 'pending'; defaultRole?: string }): Promise<{ updated_at: string }> {
+    return apiClient.updateOrgUser(userId, payload);
+  }
 
   // Organization user management APIs removed
 
